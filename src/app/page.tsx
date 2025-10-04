@@ -1,103 +1,149 @@
-import Image from "next/image";
+"use client";
+import { useEffect, useState, useRef } from "react";
+import Link from "next/link";
+import Retirement from "./Components/retirement/page";
+import Navbar from "./Components/navbar";
+import Footer from "./Components/footer";
 
-export default function Home() {
+export default function MyTaxPage() {
+  const [articles, setArticles] = useState<any[]>([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // ✅ Fetch บทความจำลอง
+  useEffect(() => {
+    async function fetchArticles() {
+      const res = await fetch("https://jsonplaceholder.typicode.com/posts?_limit=8");
+      const data = await res.json();
+      setArticles(data);
+    }
+    fetchArticles();
+  }, []);
+
+  const scrollLeft = () => scrollRef.current?.scrollBy({ left: -320, behavior: "smooth" });
+  const scrollRight = () => scrollRef.current?.scrollBy({ left: 320, behavior: "smooth" });
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="bg-[#f6fcff] min-h-screen flex flex-col font-sans">
+      {/* Header */}
+      <Navbar />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
+      {/* Hero Section */}
+      <main className="flex-1 flex flex-col items-center justify-center text-center px-6 py-16">
+        <h1 className="text-3xl md:text-5xl font-bold mb-6 text-gray-900">
+          วางแผนภาษี ออมเงิน และเกษียณง่ายๆ ในเว็บเดียว
+        </h1>
+        <p className="text-lg text-gray-600 mb-8 max-w-2xl">
+          จัดการภาษีและแผนการเงินของคุณได้ง่ายขึ้น ใช้งานฟรี ไม่ซับซ้อน
+        </p>
+        <Link
+          href="/Components/retirement"
+          className="bg-green-700 hover:bg-green-800 text-white px-6 py-3 rounded-lg text-lg transition"
+        >
+          เริ่มวางแผนเลย
+        </Link>
+      </main>
+
+      {/* Features */}
+      <section className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 px-6 mb-16">
+        <Link
+          href="/Components/retirement"
+          className="bg-white rounded-xl shadow-md p-8 text-center hover:-translate-y-1 hover:shadow-lg transition"
+        >
+          <div className="text-4xl mb-4 text-green-700">📈</div>
+          <h3 className="text-xl font-semibold mb-2">วางแผนเกษียณ</h3>
+          <p className="text-gray-600">
+            คำนวณเงินที่ต้องใช้หลังเกษียณ ปรับตามอัตราเงินเฟ้อ
+          </p>
+        </Link>
+
+        <Link
+          href="/Components/saving"
+          className="bg-white rounded-xl shadow-md p-8 text-center hover:-translate-y-1 hover:shadow-lg transition"
+        >
+          <div className="text-4xl mb-4 text-green-700">💰</div>
+          <h3 className="text-xl font-semibold mb-2">คำนวณการออม</h3>
+          <p className="text-gray-600">
+            จำลองการออมและลงทุน พร้อมกราฟแสดงผลการเติบโต
+          </p>
+        </Link>
+
+        <a
+          href="#articles"
+          className="bg-white rounded-xl shadow-md p-8 text-center hover:-translate-y-1 hover:shadow-lg transition"
+        >
+          <div className="text-4xl mb-4 text-green-700">📰</div>
+          <h3 className="text-xl font-semibold mb-2">บทความการเงิน</h3>
+          <p className="text-gray-600">
+            เรียนรู้เรื่องภาษี เงินเฟ้อ และการวางแผนการเงินในชีวิตจริง
+          </p>
+        </a>
+      </section>
+
+      {/* 🔽 บทความ */}
+      <section id="articles" className="w-full max-w-6xl mx-auto px-6 mb-20 relative">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-gray-900">📌 บทความล่าสุด</h2>
+          <a href="#" className="text-green-700 text-sm hover:underline">
+            ดูทั้งหมด →
           </a>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+
+        {/* ปุ่มเลื่อน */}
+        <button
+          onClick={scrollLeft}
+          className="absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full p-2 hover:bg-green-100 z-10"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          ◀
+        </button>
+        <button
+          onClick={scrollRight}
+          className="absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full p-2 hover:bg-green-100 z-10"
         >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          ▶
+        </button>
+
+        {/* กล่องบทความ */}
+        <div
+          ref={scrollRef}
+          className="flex gap-6 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth"
         >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          {articles.map((article) => (
+            <div
+              key={article.id}
+              className="snap-start flex-shrink-0 w-[280px] sm:w-[320px] bg-white rounded-2xl shadow-md hover:shadow-xl hover:-translate-y-1 transition"
+            >
+              <div className="h-36 bg-gradient-to-r from-green-100 to-green-200 flex items-center justify-center text-4xl">
+                📖
+              </div>
+              <div className="p-5 flex flex-col h-[200px]">
+                <h3 className="font-semibold text-lg mb-2 line-clamp-2 text-gray-900">
+                  {article.title}
+                </h3>
+                <p className="text-sm text-gray-600 line-clamp-3 flex-1">
+                  {article.body}
+                </p>
+                <a
+                  href={`/article/${article.id}`}
+                  className="mt-4 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg text-center text-sm font-medium transition"
+                >
+                  อ่านต่อ
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+          {/* ส่วนเนื้อหา */}
+      <section className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-6 space-y-10">
+        {/* Retirement Planner */}
+        <div>
+          <Retirement />
+        </div>
+      </section>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
