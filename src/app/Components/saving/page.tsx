@@ -12,7 +12,7 @@ export default function SavingPlanner() {
   const futureValue = start * Math.pow(1 + r, months) + monthly * ((Math.pow(1 + r, months) - 1) / r);
 
   return (
-    <div className="min-h-screen bg-[#f6fcff] p-8">
+    <div className="min-h-screen bg-[#f6fcff] p-8" font-sans>
       <h1 className="text-3xl font-bold text-center mb-8 text-green-800">
         💰 คำนวณการออม & การลงทุน
       </h1>
