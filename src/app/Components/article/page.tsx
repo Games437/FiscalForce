@@ -32,9 +32,9 @@ export default function ArticleSection() {
   const [loading, setLoading] = useState(true);
 
   const scrollRefs = {
-    tax: useRef<HTMLDivElement>(null),
-    retirement: useRef<HTMLDivElement>(null),
-    savings: useRef<HTMLDivElement>(null),
+    tax: useRef<HTMLDivElement | null>(null),
+    retirement: useRef<HTMLDivElement | null>(null),
+    savings: useRef<HTMLDivElement | null>(null),
   };
 
   useEffect(() => {
@@ -57,7 +57,6 @@ export default function ArticleSection() {
           await Promise.all([taxRes.json(), retirementRes.json(), savingsRes.json()]);
 
         const toArticles = (data: ApiResponse, prefix: string): Article[] => {
-          // ตรวจว่า data.results/data.data/data.articles เป็น array หรือไม่
           const list: ApiArticle[] =
             Array.isArray(data.results)
               ? data.results
@@ -188,7 +187,7 @@ export default function ArticleSection() {
 
 interface ArticleRowProps {
   title: string;
-  scrollRef: React.RefObject<HTMLDivElement>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
   articles: Article[];
   loading: boolean;
   scrollLeft: () => void;
