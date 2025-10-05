@@ -19,27 +19,27 @@ export default function MyTaxPage() {
     </h1>
     <p className="text-lg mb-8">
       คำนวณภาษี วางแผนเกษียณ ออมเงิน และอ่านบทความการเงินที่เข้าใจง่าย  
-      ทุกอย่างในที่เดียว — สำหรับคนไทยโดยเฉพาะ
+      ทุกอย่างในที่เดียว
     </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
       <Link
-        href="#calculators"
+        href="#Feature"
         className="bg-white hover:bg-black hover:text-white text-black font-semibold py-3 px-8 rounded-full transition"
       >
         เริ่มคำนวณเลย
       </Link>
       <Link
-        href="/articles"
+        href="/Components/article"
         className="bg-white/20 hover:bg-white/30 text-white font-semibold py-3 px-8 rounded-full transition"
       >
-        อ่านบทความ
+        อ่านข่าว
       </Link>
     </div>
         </div>
       </section>
 
 {/* 🔹 หัวข้อของ Feature Section */}
-<div className="text-center mt-24">
+<div id="Feature" className="text-center mt-24">
   <h2 className="text-3xl font-bold mb-4 text-gray-900">
     เครื่องมือคำนวณทางการเงินครบวงจร
   </h2>
@@ -73,7 +73,7 @@ export default function MyTaxPage() {
     className="bg-white rounded-2xl shadow-xl p-8 text-center hover:-translate-y-2 hover:shadow-2xl transition-all duration-300"
   >
     <div className="text-5xl mb-4 text-green-700">💰</div>
-    <h3 className="text-xl font-semibold mb-3 text-gray-900">คำนวณการออม</h3>
+    <h3 className="text-xl font-semibold mb-3 text-gray-900">คำนวณเงินออม</h3>
     <p className="text-gray-600">จำลองการออมและลงทุน พร้อมกราฟแสดงผลการเติบโต</p>
   </Link>
 
@@ -82,9 +82,9 @@ export default function MyTaxPage() {
     className="bg-white rounded-2xl shadow-xl p-8 text-center hover:-translate-y-2 hover:shadow-2xl transition-all duration-300"
   >
     <div className="text-5xl mb-4 text-green-700">📰</div>
-    <h3 className="text-xl font-semibold mb-3 text-gray-900">บทความการเงิน</h3>
+    <h3 className="text-xl font-semibold mb-3 text-gray-900">ข่าวการเงิน</h3>
     <p className="text-gray-600">
-      เรียนรู้เรื่องภาษี เงินเฟ้อ และการวางแผนการเงินในชีวิตจริง
+      ติดตามข่าวสารและบทความการเงินที่น่าสนใจ อัพเดททุกสัปดาห์
     </p>
   </a>
 </section>
@@ -102,7 +102,7 @@ export default function MyTaxPage() {
       พร้อมอ่านบทความการเงินที่ช่วยให้คุณเข้าใจและตัดสินใจได้ดีขึ้น
     </p>
     <Link
-      href="#calculators"
+      href="#Feature"
       className="bg-white hover:bg-black hover:text-white text-black font-semibold py-3 px-8 rounded-full transition"
     >
       เริ่มต้นวางแผนการเงิน
