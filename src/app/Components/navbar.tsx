@@ -18,7 +18,7 @@ export default function Navbar() {
             <Link href="/Components/saving" className="hover:text-yellow-400">
               คำนวณการออม
             </Link>
-            <Link href="/Components/editorial" className="hover:text-yellow-400">
+            <Link href="/Components/article" className="hover:text-yellow-400">
               บทความ
             </Link>
           </nav>
