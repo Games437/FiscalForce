@@ -23,11 +23,16 @@ export default function MyTaxPage() {
     </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
       <Link
-        href="#Feature"
-        className="bg-white hover:bg-black hover:text-white text-black font-semibold py-3 px-8 rounded-full transition"
-      >
-        เริ่มคำนวณเลย
-      </Link>
+  href="#Feature"
+  onClick={(e) => {
+    e.preventDefault();
+    const element = document.getElementById("Feature");
+    element?.scrollIntoView({ behavior: "smooth" });
+  }}
+  className="bg-white hover:bg-black hover:text-white text-black font-semibold py-3 px-8 rounded-full transition"
+>
+  เริ่มคำนวณเลย
+</Link>
       <Link
         href="/Components/article"
         className="bg-white/20 hover:bg-white/30 text-white font-semibold py-3 px-8 rounded-full transition"
@@ -102,11 +107,16 @@ export default function MyTaxPage() {
       พร้อมอ่านบทความการเงินที่ช่วยให้คุณเข้าใจและตัดสินใจได้ดีขึ้น
     </p>
     <Link
-      href="#Feature"
-      className="bg-white hover:bg-black hover:text-white text-black font-semibold py-3 px-8 rounded-full transition"
-    >
-      เริ่มต้นวางแผนการเงิน
-    </Link>
+  href="#Feature"
+  onClick={(e) => {
+    e.preventDefault();
+    const element = document.getElementById("Feature");
+    element?.scrollIntoView({ behavior: "smooth" });
+  }}
+  className="bg-white hover:bg-black hover:text-white text-black font-semibold py-3 px-8 rounded-full transition"
+>
+  เริ่มต้นวางแผนการเงิน
+</Link>
   </div>
 </section>
 
