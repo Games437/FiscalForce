@@ -1,5 +1,5 @@
-import Navbar from "../navbar";
-import Footer from "../footer";
+import Navbar from "../pageLayout/navbar";
+import Footer from "../pageLayout/footer";
 
 export default function RetirementLayout({
   children,

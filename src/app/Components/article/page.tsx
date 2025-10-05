@@ -41,7 +41,9 @@ const categories = [
 ];
 
 export default function ArticleSection() {
-  const [articlesByCategory, setArticlesByCategory] = useState<Record<string, Article[]>>({});
+  const [articlesByCategory, setArticlesByCategory] = useState<
+    Record<string, Article[]>
+  >({});
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>("tax");
   const [showAll, setShowAll] = useState(false);
@@ -93,18 +95,26 @@ export default function ArticleSection() {
             >
               <div className="relative h-36 w-full bg-gray-200">
                 {article.image ? (
-                  <img src={article.image} alt={article.title} className="object-cover w-full h-full" />
+                  <img
+                    src={article.image}
+                    alt={article.title}
+                    className="object-cover w-full h-full"
+                  />
                 ) : (
                   <div className="flex items-center justify-center text-4xl text-green-700 w-full h-full">
                     📖
                   </div>
                 )}
                 <div className="absolute bottom-0 w-full bg-gradient-to-t from-black/70 to-transparent p-2">
-                  <h3 className="text-white text-sm font-semibold line-clamp-2">{article.title}</h3>
+                  <h3 className="text-white text-sm font-semibold line-clamp-2">
+                    {article.title}
+                  </h3>
                 </div>
               </div>
               <div className="p-3 flex flex-col h-[150px]">
-                <p className="text-sm text-gray-600 line-clamp-3 flex-1">{article.description}</p>
+                <p className="text-sm text-gray-600 line-clamp-3 flex-1">
+                  {article.description}
+                </p>
                 <a
                   href={article.url}
                   target="_blank"
@@ -132,7 +142,10 @@ export default function ArticleSection() {
   };
 
   return (
-    <section id="articles" className="w-full max-w-6xl mx-auto px-6 mb-20 relative">
+    <section
+      id="articles"
+      className="w-full max-w-6xl mx-auto px-6 mb-20 relative"
+    >
       <h2 className="text-2xl font-bold text-gray-900 mb-6">ข่าวล่าสุด</h2>
 
       {/* ปุ่มหมวดหมู่ */}
@@ -145,7 +158,9 @@ export default function ArticleSection() {
               setShowAll(false);
             }}
             className={`py-2 px-4 rounded-lg font-medium transition ${
-              activeCategory === cat.key ? "bg-black text-white" : "bg-gray-200 text-gray-700"
+              activeCategory === cat.key
+                ? "bg-black text-white"
+                : "bg-gray-200 text-gray-700"
             }`}
           >
             {cat.label}
@@ -156,7 +171,13 @@ export default function ArticleSection() {
       {loading ? (
         <p className="text-center text-gray-500">กำลังโหลดข่าว...</p>
       ) : (
-        <>{articlesByCategory[activeCategory] ? renderGrid(articlesByCategory[activeCategory]) : <p>ไม่พบข่าว</p>}</>
+        <>
+          {articlesByCategory[activeCategory] ? (
+            renderGrid(articlesByCategory[activeCategory])
+          ) : (
+            <p>ไม่พบข่าว</p>
+          )}
+        </>
       )}
     </section>
   );

@@ -57,7 +57,8 @@ function calculateTax(inputs: {
   const businessExpense = Math.min(inputs.business * 0.6, 100000);
 
   const totalIncome =
-    salary - salaryExpense +
+    salary -
+    salaryExpense +
     inputs.bonus +
     (inputs.business - businessExpense) +
     inputs.interest +
@@ -101,7 +102,9 @@ function calculateTax(inputs: {
       const t = amt * b.rate;
       tax += t;
       breakdown.push({
-        range: `${fmtNumber(prev + 1)} - ${isFinite(b.limit) ? fmtNumber(b.limit) : "∞"}`,
+        range: `${fmtNumber(prev + 1)} - ${
+          isFinite(b.limit) ? fmtNumber(b.limit) : "∞"
+        }`,
         amount: amt,
         rate: b.rate,
         tax: t,
@@ -145,7 +148,8 @@ export default function TaxPlannerWizard() {
   const chartRef = useRef<HTMLCanvasElement>(null);
   const chartInstance = useRef<Chart | null>(null);
 
-  const setField = (k: string, v: string | boolean) => setData((p) => ({ ...p, [k]: v }));
+  const setField = (k: string, v: string | boolean) =>
+    setData((p) => ({ ...p, [k]: v }));
   const next = () => setStep((s) => Math.min(totalSteps, s + 1));
   const prev = () => setStep((s) => Math.max(1, s - 1));
   const restart = () => {
@@ -204,124 +208,235 @@ export default function TaxPlannerWizard() {
   };
 
   /* ---------- Draw Chart ---------- */
-useEffect(() => {
-  if (!chartRef.current || !result) return;
+  useEffect(() => {
+    if (!chartRef.current || !result) return;
 
-  const dataChart = {
-    labels: result.breakdown.map((b) => b.range),
-    datasets: [
-      {
-        label: "เงินได้ที่เสียภาษี",
-        data: result.breakdown.map((b) => b.amount),
-        backgroundColor: "#60a5fa", // น้ำเงิน
-        borderRadius: 6,
-      },
-      {
-        label: "ภาษีแต่ละขั้น",
-        data: result.breakdown.map((b) => b.tax),
-        backgroundColor: "#34d399", // เขียว
-        borderRadius: 6,
-      },
-    ],
-  };
+    const dataChart = {
+      labels: result.breakdown.map((b) => b.range),
+      datasets: [
+        {
+          label: "เงินได้ที่เสียภาษี",
+          data: result.breakdown.map((b) => b.amount),
+          backgroundColor: "#60a5fa", // น้ำเงิน
+          borderRadius: 6,
+        },
+        {
+          label: "ภาษีแต่ละขั้น",
+          data: result.breakdown.map((b) => b.tax),
+          backgroundColor: "#34d399", // เขียว
+          borderRadius: 6,
+        },
+      ],
+    };
 
-  if (chartInstance.current) {
-    chartInstance.current.data = dataChart;
-    chartInstance.current.update();
-  } else {
-    chartInstance.current = new Chart(chartRef.current, {
-      type: "bar",
-      data: dataChart,
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { position: "bottom", labels: { padding: 15, boxWidth: 20 } },
-          tooltip: {
-            mode: "index",
-            intersect: false,
-            callbacks: {
-              label: function(context) {
-                return `${context.dataset.label}: ${fmtNumber(context.parsed.y)} บาท`;
+    if (chartInstance.current) {
+      chartInstance.current.data = dataChart;
+      chartInstance.current.update();
+    } else {
+      chartInstance.current = new Chart(chartRef.current, {
+        type: "bar",
+        data: dataChart,
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: { padding: 15, boxWidth: 20 },
+            },
+            tooltip: {
+              mode: "index",
+              intersect: false,
+              callbacks: {
+                label: function (context) {
+                  return `${context.dataset.label}: ${fmtNumber(
+                    context.parsed.y
+                  )} บาท`;
+                },
               },
             },
           },
-        },
-        interaction: {
-          mode: 'index' as const,
-          intersect: false,
-        },
-        scales: {
-          x: { stacked: true, title: { display: true, text: "ช่วงเงินได้" } },
-          y: { 
-            stacked: true,
-            beginAtZero: true, 
-            title: { display: true, text: "จำนวนเงิน (บาท)" },
+          interaction: {
+            mode: "index" as const,
+            intersect: false,
+          },
+          scales: {
+            x: { stacked: true, title: { display: true, text: "ช่วงเงินได้" } },
+            y: {
+              stacked: true,
+              beginAtZero: true,
+              title: { display: true, text: "จำนวนเงิน (บาท)" },
+            },
           },
         },
-      },
-    });
-  }
-}, [result]);
+      });
+    }
+  }, [result]);
 
   return (
     <div className="max-w-4xl mx-auto mt-10 bg-white rounded-2xl shadow-2xl p-8 font-sans">
       {/* Progress Bar */}
       <div className="mb-10">
         <div className="flex justify-between">
-          {["รายรับ","ครอบครัว","กองทุน","ประกัน","อื่นๆ","ผลลัพธ์"].map((t, i)=>(
-            <div key={i} className="flex flex-col items-center">
-              <div className={`w-10 h-10 rounded-full border-4 flex items-center justify-center transition-all duration-300 
-                ${step>=i+1?"bg-green-600 border-green-600 text-white scale-110":"border-gray-300 text-gray-700"}`}>
-                {i+1}
+          {["รายรับ", "ครอบครัว", "กองทุน", "ประกัน", "อื่นๆ", "ผลลัพธ์"].map(
+            (t, i) => (
+              <div key={i} className="flex flex-col items-center">
+                <div
+                  className={`w-10 h-10 rounded-full border-4 flex items-center justify-center transition-all duration-300 
+                ${
+                  step >= i + 1
+                    ? "bg-green-600 border-green-600 text-white scale-110"
+                    : "border-gray-300 text-gray-700"
+                }`}
+                >
+                  {i + 1}
+                </div>
+                <span
+                  className={`text-xs mt-2 ${
+                    step === i + 1
+                      ? "text-green-700 font-semibold"
+                      : "text-gray-400"
+                  }`}
+                >
+                  {t}
+                </span>
               </div>
-              <span className={`text-xs mt-2 ${step===i+1?"text-green-700 font-semibold":"text-gray-400"}`}>{t}</span>
-            </div>
-          ))}
+            )
+          )}
         </div>
       </div>
 
       {/* Step Container */}
       <div className="flex flex-col justify-start animate-fadein overflow-y-auto">
         {step < 6 && (
-          <div className="space-y-6 min-h-[650px]"> {/* <-- เพิ่ม min-h เท่ากันทุกหน้า */}
-          <h2 className="text-2xl font-bold text-green-700">Step {step}</h2>
-          <p className="text-sm text-gray-500">กรอกข้อมูลของคุณในแต่ละขั้นตอนให้ครบถ้วน</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {step === 1 && <>
-                <NumInput label="เงินเดือน (บาท/เดือน)" value={String(data.salaryMonthly)} onChange={(v)=>setField("salaryMonthly",v)} />
-                <NumInput label="โบนัส" value={String(data.bonus)} onChange={(v)=>setField("bonus",v)} />
-                <NumInput label="รายได้ธุรกิจ" value={String(data.business)} onChange={(v)=>setField("business",v)} />
-                <NumInput label="ดอกเบี้ยเงินฝาก" value={String(data.interest)} onChange={(v)=>setField("interest",v)} />
-                <NumInput label="เงินปันผล" value={String(data.dividend)} onChange={(v)=>setField("dividend",v)} />
-                <NumInput label="ค่าเช่า" value={String(data.rent)} onChange={(v)=>setField("rent",v)} />
-                <NumInput label="รายได้อื่น ๆ" value={String(data.otherIncome)} onChange={(v)=>setField("otherIncome",v)} full />
-              </>}
+          <div className="space-y-6 min-h-[650px]">
+            {" "}
+            {/* <-- เพิ่ม min-h เท่ากันทุกหน้า */}
+            <h2 className="text-2xl font-bold text-green-700">Step {step}</h2>
+            <p className="text-sm text-gray-500">
+              กรอกข้อมูลของคุณในแต่ละขั้นตอนให้ครบถ้วน
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {step === 1 && (
+                <>
+                  <NumInput
+                    label="เงินเดือน (บาท/เดือน)"
+                    value={String(data.salaryMonthly)}
+                    onChange={(v) => setField("salaryMonthly", v)}
+                  />
+                  <NumInput
+                    label="โบนัส"
+                    value={String(data.bonus)}
+                    onChange={(v) => setField("bonus", v)}
+                  />
+                  <NumInput
+                    label="รายได้ธุรกิจ"
+                    value={String(data.business)}
+                    onChange={(v) => setField("business", v)}
+                  />
+                  <NumInput
+                    label="ดอกเบี้ยเงินฝาก"
+                    value={String(data.interest)}
+                    onChange={(v) => setField("interest", v)}
+                  />
+                  <NumInput
+                    label="เงินปันผล"
+                    value={String(data.dividend)}
+                    onChange={(v) => setField("dividend", v)}
+                  />
+                  <NumInput
+                    label="ค่าเช่า"
+                    value={String(data.rent)}
+                    onChange={(v) => setField("rent", v)}
+                  />
+                  <NumInput
+                    label="รายได้อื่น ๆ"
+                    value={String(data.otherIncome)}
+                    onChange={(v) => setField("otherIncome", v)}
+                    full
+                  />
+                </>
+              )}
 
-              {step === 2 && <>
-                <label className="col-span-2 flex items-center gap-2 font-medium">
-                  <input type="checkbox" checked={Boolean(data.ded_spouse)} onChange={(e)=>setField("ded_spouse", e.target.checked)} className="w-4 h-4 accent-green-600"/>
-                  คู่สมรสไม่มีรายได้ (60,000)
-                </label>
-                <NumInput label="จำนวนบุตร" value={String(data.ded_children)} onChange={(v)=>setField("ded_children",v)} />
-                <NumInput label="พ่อแม่ / ผู้พิการ (บาท)" value={String(data.ded_parents)} onChange={(v)=>setField("ded_parents",v)} />
-              </>}
+              {step === 2 && (
+                <>
+                  <label className="col-span-2 flex items-center gap-2 font-medium">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(data.ded_spouse)}
+                      onChange={(e) => setField("ded_spouse", e.target.checked)}
+                      className="w-4 h-4 accent-green-600"
+                    />
+                    คู่สมรสไม่มีรายได้ (60,000)
+                  </label>
+                  <NumInput
+                    label="จำนวนบุตร"
+                    value={String(data.ded_children)}
+                    onChange={(v) => setField("ded_children", v)}
+                  />
+                  <NumInput
+                    label="พ่อแม่ / ผู้พิการ (บาท)"
+                    value={String(data.ded_parents)}
+                    onChange={(v) => setField("ded_parents", v)}
+                  />
+                </>
+              )}
 
-              {step === 3 && <>
-                <NumInput label="ประกันสังคม" value={String(data.ded_social)} onChange={(v)=>setField("ded_social",v)} />
-                <NumInput label="กองทุนสำรองเลี้ยงชีพ" value={String(data.ded_provident)} onChange={(v)=>setField("ded_provident",v)} />
-                <NumInput label="RMF / SSF" value={String(data.ded_fund)} onChange={(v)=>setField("ded_fund",v)} full />
-              </>}
+              {step === 3 && (
+                <>
+                  <NumInput
+                    label="ประกันสังคม"
+                    value={String(data.ded_social)}
+                    onChange={(v) => setField("ded_social", v)}
+                  />
+                  <NumInput
+                    label="กองทุนสำรองเลี้ยงชีพ"
+                    value={String(data.ded_provident)}
+                    onChange={(v) => setField("ded_provident", v)}
+                  />
+                  <NumInput
+                    label="RMF / SSF"
+                    value={String(data.ded_fund)}
+                    onChange={(v) => setField("ded_fund", v)}
+                    full
+                  />
+                </>
+              )}
 
-              {step === 4 && <>
-                <NumInput label="เบี้ยประกันชีวิต" value={String(data.ded_insurance)} onChange={(v)=>setField("ded_insurance",v)} />
-                <NumInput label="เบี้ยประกันสุขภาพ" value={String(data.ded_health)} onChange={(v)=>setField("ded_health",v)} />
-              </>}
+              {step === 4 && (
+                <>
+                  <NumInput
+                    label="เบี้ยประกันชีวิต"
+                    value={String(data.ded_insurance)}
+                    onChange={(v) => setField("ded_insurance", v)}
+                  />
+                  <NumInput
+                    label="เบี้ยประกันสุขภาพ"
+                    value={String(data.ded_health)}
+                    onChange={(v) => setField("ded_health", v)}
+                  />
+                </>
+              )}
 
-              {step === 5 && <>
-                <NumInput label="ดอกเบี้ยบ้าน" value={String(data.ded_homeLoan)} onChange={(v)=>setField("ded_homeLoan",v)} />
-                <NumInput label="เงินบริจาค" value={String(data.ded_donate)} onChange={(v)=>setField("ded_donate",v)} />
-                <NumInput label="ภาษีหัก ณ ที่จ่าย" value={String(data.taxWithheld)} onChange={(v)=>setField("taxWithheld",v)} full />
-              </>}
+              {step === 5 && (
+                <>
+                  <NumInput
+                    label="ดอกเบี้ยบ้าน"
+                    value={String(data.ded_homeLoan)}
+                    onChange={(v) => setField("ded_homeLoan", v)}
+                  />
+                  <NumInput
+                    label="เงินบริจาค"
+                    value={String(data.ded_donate)}
+                    onChange={(v) => setField("ded_donate", v)}
+                  />
+                  <NumInput
+                    label="ภาษีหัก ณ ที่จ่าย"
+                    value={String(data.taxWithheld)}
+                    onChange={(v) => setField("taxWithheld", v)}
+                    full
+                  />
+                </>
+              )}
             </div>
           </div>
         )}
@@ -330,8 +445,12 @@ useEffect(() => {
         {step === 6 && result && (
           <div className="space-y-6">
             <div className="p-6 bg-green-50 border-2 border-green-400 rounded-xl shadow">
-              <h3 className="text-xl font-bold text-green-800 mb-2">ภาษีที่คุณต้องจ่ายประมาณ</h3>
-              <p className="text-5xl font-bold text-green-700">{fmtNumber(Math.abs(result.taxDue))} บาท</p>
+              <h3 className="text-xl font-bold text-green-800 mb-2">
+                ภาษีที่คุณต้องจ่ายประมาณ
+              </h3>
+              <p className="text-5xl font-bold text-green-700">
+                {fmtNumber(Math.abs(result.taxDue))} บาท
+              </p>
             </div>
 
             <div className="border rounded-lg overflow-hidden">
@@ -345,12 +464,16 @@ useEffect(() => {
                   </tr>
                 </thead>
                 <tbody>
-                  {result.breakdown.map((b,i)=>(
+                  {result.breakdown.map((b, i) => (
                     <tr key={i} className="border-t hover:bg-green-50">
                       <td className="p-2">{b.range}</td>
-                      <td className="p-2 text-center">{(b.rate*100).toFixed(0)}%</td>
+                      <td className="p-2 text-center">
+                        {(b.rate * 100).toFixed(0)}%
+                      </td>
                       <td className="p-2 text-right">{fmtNumber(b.amount)}</td>
-                      <td className="p-2 text-right text-pink-600">{fmtNumber(b.tax)}</td>
+                      <td className="p-2 text-right text-pink-600">
+                        {fmtNumber(b.tax)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -367,17 +490,57 @@ useEffect(() => {
 
       {/* Navigation */}
       <div className="mt-8 flex justify-between">
-        {step > 1 && step < 6 ? <button onClick={prev} className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300">ย้อนกลับ</button> : <div/>}
-        {step < 5 && <button onClick={next} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">ถัดไป</button>}
-        {step === 5 && <button onClick={runCalculate} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">คำนวณ</button>}
-        {step === 6 && <button onClick={restart} className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400">เริ่มใหม่</button>}
+        {step > 1 && step < 6 ? (
+          <button
+            onClick={prev}
+            className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
+          >
+            ย้อนกลับ
+          </button>
+        ) : (
+          <div />
+        )}
+        {step < 5 && (
+          <button
+            onClick={next}
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+          >
+            ถัดไป
+          </button>
+        )}
+        {step === 5 && (
+          <button
+            onClick={runCalculate}
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+          >
+            คำนวณ
+          </button>
+        )}
+        {step === 6 && (
+          <button
+            onClick={restart}
+            className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
+          >
+            เริ่มใหม่
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
 /* ---------- Input Component ---------- */
-function NumInput({ label, value, onChange, full = false }: { label: string; value: string; onChange: (v: string)=>void; full?: boolean; }) {
+function NumInput({
+  label,
+  value,
+  onChange,
+  full = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  full?: boolean;
+}) {
   const handle = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
     if (/^[0-9.,\s]*$/.test(v) || v === "") onChange(v);

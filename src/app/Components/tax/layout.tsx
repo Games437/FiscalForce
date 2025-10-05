@@ -1,11 +1,7 @@
-import Navbar from "../navbar";
-import Footer from "../footer";
+import Navbar from "../pageLayout/navbar";
+import Footer from "../pageLayout/footer";
 
-export default function TaxLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function TaxLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="bg-[#f6fcff] min-h-screen flex flex-col font-bold font-sans">
       <Navbar />

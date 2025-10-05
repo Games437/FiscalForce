@@ -22,7 +22,7 @@ export default function GSBSavingCalculator() {
     const initialVal = Number(initialAmount) || 0;
 
     const months = yearsVal * 12;
-    const monthlyRate = (rateVal / 100) / 12;
+    const monthlyRate = rateVal / 100 / 12;
 
     if (months <= 0) {
       setResult(null);
@@ -34,7 +34,9 @@ export default function GSBSavingCalculator() {
 
     let monthlyPayment = 0;
     if (monthlyRate > 0) {
-      monthlyPayment = remainingAmount / (((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate));
+      monthlyPayment =
+        remainingAmount /
+        ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate);
     } else {
       monthlyPayment = remainingAmount / months;
     }
@@ -46,7 +48,7 @@ export default function GSBSavingCalculator() {
       monthlyPayment,
       totalDeposit,
       totalInterest,
-      targetAmount: targetVal
+      targetAmount: targetVal,
     });
   };
 
@@ -65,7 +67,9 @@ export default function GSBSavingCalculator() {
         <div className="text-center mb-10">
           <div
             className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 shadow-lg"
-            style={{ background: "linear-gradient(135deg, #1f2937 0%, #111827 100%)" }}
+            style={{
+              background: "linear-gradient(135deg, #1f2937 0%, #111827 100%)",
+            }}
           >
             <span className="text-4xl">💰</span>
           </div>
@@ -90,13 +94,19 @@ export default function GSBSavingCalculator() {
 
             <div className="grid gap-5">
               <div className="relative">
-                <label className="block text-base font-semibold mb-2" style={{ color: "#04081b" }}>
+                <label
+                  className="block text-base font-semibold mb-2"
+                  style={{ color: "#04081b" }}
+                >
                   จำนวนเงินที่ต้องการ (บาท)
                 </label>
                 <input
                   type="number"
                   className="w-full rounded-lg p-3 pl-4 text-base focus:outline-none focus:ring-2 focus:ring-gray-500 border-2 transition-all bg-gradient-to-r from-gray-50/50 to-gray-100/50"
-                  style={{ borderColor: "rgba(4,8,27,0.125)", color: "#04081b" }}
+                  style={{
+                    borderColor: "rgba(4,8,27,0.125)",
+                    color: "#04081b",
+                  }}
                   value={targetAmount}
                   onChange={(e) => setTargetAmount(e.target.value)}
                   min={0}
@@ -107,13 +117,19 @@ export default function GSBSavingCalculator() {
 
               <div className="grid md:grid-cols-2 gap-5">
                 <div className="relative">
-                  <label className="block text-base font-semibold mb-2" style={{ color: "#04081b" }}>
+                  <label
+                    className="block text-base font-semibold mb-2"
+                    style={{ color: "#04081b" }}
+                  >
                     ระยะเวลาที่ต้องการออม (ปี)
                   </label>
                   <input
                     type="number"
                     className="w-full rounded-lg p-3 text-base focus:outline-none focus:ring-2 focus:ring-gray-500 border-2 transition-all bg-gradient-to-r from-gray-50/50 to-gray-100/50"
-                    style={{ borderColor: "rgba(4,8,27,0.125)", color: "#04081b" }}
+                    style={{
+                      borderColor: "rgba(4,8,27,0.125)",
+                      color: "#04081b",
+                    }}
                     value={years}
                     onChange={(e) => setYears(e.target.value)}
                     min={1}
@@ -123,13 +139,19 @@ export default function GSBSavingCalculator() {
                 </div>
 
                 <div className="relative">
-                  <label className="block text-base font-semibold mb-2" style={{ color: "#04081b" }}>
+                  <label
+                    className="block text-base font-semibold mb-2"
+                    style={{ color: "#04081b" }}
+                  >
                     อัตราดอกเบี้ย (% ต่อปี)
                   </label>
                   <input
                     type="number"
                     className="w-full rounded-lg p-3 text-base focus:outline-none focus:ring-2 focus:ring-gray-500 border-2 transition-all bg-gradient-to-r from-gray-50/50 to-gray-100/50"
-                    style={{ borderColor: "rgba(4,8,27,0.125)", color: "#04081b" }}
+                    style={{
+                      borderColor: "rgba(4,8,27,0.125)",
+                      color: "#04081b",
+                    }}
                     value={interestRate}
                     onChange={(e) => setInterestRate(e.target.value)}
                     min={0}
@@ -141,13 +163,19 @@ export default function GSBSavingCalculator() {
               </div>
 
               <div className="relative">
-                <label className="block text-base font-semibold mb-2" style={{ color: "#04081b" }}>
+                <label
+                  className="block text-base font-semibold mb-2"
+                  style={{ color: "#04081b" }}
+                >
                   เงินออมเริ่มต้น (บาท)
                 </label>
                 <input
                   type="number"
                   className="w-full rounded-lg p-3 text-base focus:outline-none focus:ring-2 focus:ring-gray-500 border-2 transition-all bg-gradient-to-r from-gray-50/50 to-gray-100/50"
-                  style={{ borderColor: "rgba(4,8,27,0.125)", color: "#04081b" }}
+                  style={{
+                    borderColor: "rgba(4,8,27,0.125)",
+                    color: "#04081b",
+                  }}
                   value={initialAmount}
                   onChange={(e) => setInitialAmount(e.target.value)}
                   min={0}
@@ -162,7 +190,10 @@ export default function GSBSavingCalculator() {
               <button
                 onClick={handleCalculate}
                 className="w-full rounded-lg p-3 text-base font-bold text-white shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 relative overflow-hidden group"
-                style={{ background: "linear-gradient(135deg, #374151 0%, #111827 100%)" }}
+                style={{
+                  background:
+                    "linear-gradient(135deg, #374151 0%, #111827 100%)",
+                }}
               >
                 <span className="relative z-10">คำนวณ</span>
                 <div className="absolute inset-0 bg-white/20 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
@@ -173,7 +204,7 @@ export default function GSBSavingCalculator() {
                 className="w-full rounded-lg p-3 text-base font-bold border-2 shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 bg-white"
                 style={{
                   color: "#04081b",
-                  borderColor: "rgba(4,8,27,0.25)"
+                  borderColor: "rgba(4,8,27,0.25)",
                 }}
               >
                 ล้างข้อมูล
@@ -183,7 +214,10 @@ export default function GSBSavingCalculator() {
 
           {/* Result Section */}
           {result && (
-            <div className="pt-8 border-t-2" style={{ borderColor: "rgba(4,8,27,0.0625)" }}>
+            <div
+              className="pt-8 border-t-2"
+              style={{ borderColor: "rgba(4,8,27,0.0625)" }}
+            >
               <div className="flex items-center gap-2 mb-6">
                 <div className="w-1 h-6 rounded-full bg-gradient-to-b from-gray-600 to-gray-800"></div>
                 <h2 className="text-2xl font-bold" style={{ color: "#04081b" }}>
@@ -194,12 +228,17 @@ export default function GSBSavingCalculator() {
               {/* Main Result Box */}
               <div
                 className="rounded-xl p-6 text-white text-center mb-5 shadow-lg relative overflow-hidden"
-                style={{ background: "linear-gradient(135deg, #374151 0%, #111827 100%)" }}
+                style={{
+                  background:
+                    "linear-gradient(135deg, #374151 0%, #111827 100%)",
+                }}
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
                 <div className="relative z-10">
-                  <p className="text-sm opacity-90 mb-2 font-normal">จำนวนเงินที่ต้องออม</p>
+                  <p className="text-sm opacity-90 mb-2 font-normal">
+                    จำนวนเงินที่ต้องออม
+                  </p>
                   <div className="flex items-baseline justify-center gap-2">
                     <p className="text-4xl font-bold">
                       {result.monthlyPayment > 0
@@ -208,7 +247,9 @@ export default function GSBSavingCalculator() {
                     </p>
                     <p className="text-lg font-normal">บาท</p>
                   </div>
-                  <p className="text-sm opacity-90 mt-2 font-normal">ต่อเดือน</p>
+                  <p className="text-sm opacity-90 mt-2 font-normal">
+                    ต่อเดือน
+                  </p>
                 </div>
               </div>
 
@@ -218,11 +259,17 @@ export default function GSBSavingCalculator() {
                   className="flex justify-between items-center p-4 rounded-xl border-2 transition-all hover:shadow-md"
                   style={{ backgroundColor: "#f9fafb", borderColor: "#e5e7eb" }}
                 >
-                  <span className="font-normal text-base flex items-center gap-2" style={{ color: "#04081b" }}>
+                  <span
+                    className="font-normal text-base flex items-center gap-2"
+                    style={{ color: "#04081b" }}
+                  >
                     <div className="w-2 h-2 rounded-full bg-gray-600"></div>
                     เงินต้นที่ฝากสะสม
                   </span>
-                  <span className="font-bold text-base" style={{ color: "#04081b" }}>
+                  <span
+                    className="font-bold text-base"
+                    style={{ color: "#04081b" }}
+                  >
                     {Math.ceil(result.totalDeposit).toLocaleString()} บาท
                   </span>
                 </div>
@@ -231,20 +278,33 @@ export default function GSBSavingCalculator() {
                   className="flex justify-between items-center p-4 rounded-xl border-2 transition-all hover:shadow-md"
                   style={{ backgroundColor: "#f9fafb", borderColor: "#e5e7eb" }}
                 >
-                  <span className="font-normal text-base flex items-center gap-2" style={{ color: "#04081b" }}>
+                  <span
+                    className="font-normal text-base flex items-center gap-2"
+                    style={{ color: "#04081b" }}
+                  >
                     <div className="w-2 h-2 rounded-full bg-gray-600"></div>
                     ดอกเบี้ยที่ได้รับ
                   </span>
-                  <span className="font-bold text-base" style={{ color: "#04081b" }}>
+                  <span
+                    className="font-bold text-base"
+                    style={{ color: "#04081b" }}
+                  >
                     +{Math.ceil(result.totalInterest).toLocaleString()} บาท
                   </span>
                 </div>
 
                 <div
                   className="flex justify-between items-center p-5 rounded-xl border-2 shadow-md"
-                  style={{ background: "linear-gradient(135deg, #f3f4f615 0%, #1f293715 100%)", borderColor: "#6b728040" }}
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #f3f4f615 0%, #1f293715 100%)",
+                    borderColor: "#6b728040",
+                  }}
                 >
-                  <span className="font-bold text-base flex items-center gap-2" style={{ color: "#04081b" }}>
+                  <span
+                    className="font-bold text-base flex items-center gap-2"
+                    style={{ color: "#04081b" }}
+                  >
                     <div className="w-3 h-3 rounded-full bg-gradient-to-r from-gray-600 to-gray-900"></div>
                     เงินออมที่ได้รวม
                   </span>
@@ -259,7 +319,8 @@ export default function GSBSavingCalculator() {
                 <p className="text-sm text-gray-700 leading-relaxed font-normal flex items-start gap-2">
                   <span className="text-amber-600 text-lg">💡</span>
                   <span>
-                    <span className="font-bold text-amber-800">หมายเหตุ:</span> ผลการคำนวณข้างต้นเป็นเพียงประมาณการเบื้องต้นเท่านั้น
+                    <span className="font-bold text-amber-800">หมายเหตุ:</span>{" "}
+                    ผลการคำนวณข้างต้นเป็นเพียงประมาณการเบื้องต้นเท่านั้น
                   </span>
                 </p>
               </div>
