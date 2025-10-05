@@ -21,9 +21,9 @@ interface ApiResponse {
   results?: ApiArticle[];
   data?: ApiArticle[];
   articles?: ApiArticle[];
-  [key: string]: any;
 }
 
+// Component หลัก
 export default function ArticleSection() {
   const [taxArticles, setTaxArticles] = useState<Article[]>([]);
   const [retirementArticles, setRetirementArticles] = useState<Article[]>([]);
@@ -31,9 +31,9 @@ export default function ArticleSection() {
   const [loading, setLoading] = useState(true);
 
   const scrollRefs = {
-    tax: useRef<HTMLDivElement>(null),
-    retirement: useRef<HTMLDivElement>(null),
-    savings: useRef<HTMLDivElement>(null),
+    tax: useRef<HTMLDivElement | null>(null),
+    retirement: useRef<HTMLDivElement | null>(null),
+    savings: useRef<HTMLDivElement | null>(null),
   };
 
   useEffect(() => {
@@ -52,8 +52,9 @@ export default function ArticleSection() {
           ),
         ]);
 
-        const [taxData, retirementData, savingsData]: ApiResponse[] =
-          await Promise.all([taxRes.json(), retirementRes.json(), savingsRes.json()]);
+        const taxData: ApiResponse = await taxRes.json();
+        const retirementData: ApiResponse = await retirementRes.json();
+        const savingsData: ApiResponse = await savingsRes.json();
 
         const toArticles = (data: ApiResponse, prefix: string): Article[] => {
           const list: ApiArticle[] =
@@ -184,9 +185,10 @@ export default function ArticleSection() {
   );
 }
 
+// Component แถวบทความ
 interface ArticleRowProps {
   title: string;
-  scrollRef: React.RefObject<HTMLDivElement>;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
   articles: Article[];
   loading: boolean;
   scrollLeft: () => void;
