@@ -21,7 +21,7 @@ interface ApiResponse {
   results?: ApiArticle[];
   data?: ApiArticle[];
   articles?: ApiArticle[];
-  [key: string]: any;
+  [key: string]: unknown; // ใช้ unknown แทน any
 }
 
 export default function ArticleSection() {
