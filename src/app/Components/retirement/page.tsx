@@ -2,16 +2,16 @@
 
 import React, { useState, useMemo, useCallback, memo } from 'react';
 
-// ✅ InputField แก้ให้ไม่ขยับ layout ตอนพิมพ์
-const InputField = memo(({ label, keyName, suffix = "", value, onChange }: any) => {
-  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    // อนุญาตให้พิมพ์ได้เฉพาะตัวเลข จุด ทศนิยม
-    if (/^-?\d*\.?\d*$/.test(val) || val === "") {
-      onChange(keyName, val);
-    }
-  };
+// ✅ ย้าย InputField ออกมานอก RetirementPlan
+interface InputFieldProps {
+  label: string;
+  keyName: string;
+  suffix?: string;
+  value: string;
+  onChange: (key: string, value: string) => void;
+}
 
+const InputField = memo(({ label, keyName, suffix = "", value, onChange }: InputFieldProps) => {
   return (
     <div className="bg-gray-50 p-3 rounded">
       <label className="text-sm text-gray-600 block mb-1">{label}</label>
@@ -20,14 +20,12 @@ const InputField = memo(({ label, keyName, suffix = "", value, onChange }: any) 
           type="text"
           inputMode="decimal"
           value={value}
-          onChange={handleInput}
-          className="flex-1 min-w-0 w-full px-3 py-2 border border-gray-300 rounded 
+          onChange={(e) => onChange(keyName, e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded 
                      focus:outline-none focus:ring-2 focus:ring-blue-500 
-                     text-gray-800 font-medium"
+                     font-bold text-gray-800"
         />
-        {suffix && (
-          <span className="text-sm text-gray-600 whitespace-nowrap">{suffix}</span>
-        )}
+        {suffix && <span className="text-sm text-gray-600 whitespace-nowrap">{suffix}</span>}
       </div>
     </div>
   );
@@ -35,33 +33,24 @@ const InputField = memo(({ label, keyName, suffix = "", value, onChange }: any) 
 InputField.displayName = "InputField";
 
 export default function RetirementPlan() {
-  const defaultInputs = {
-    currentAge: "0",
-    retireAge: "0",
-    lifeExpectancy: "0",
-    currentExpense: "0",
+  const [inputs, setInputs] = useState({
+    currentAge: "35",
+    retireAge: "60",
+    lifeExpectancy: "85",
+    currentExpense: "30000",
     inflationRate: "2.5",
     salaryGrowth: "3.0",
     returnAfterRetire: "4.0",
     pvdReturn: "5.0",
     pvdMonthly: "5000",
     pvdCurrent: "200000",
-  };
-
-  const [inputs, setInputs] = useState(defaultInputs);
+  });
 
   const handleChange = useCallback((key: string, value: string) => {
     setInputs(prev => ({ ...prev, [key]: value }));
   }, []);
 
-  const handleReset = useCallback(() => {
-    setInputs(defaultInputs);
-  }, []);
-
-  const toNumber = (v: string) => {
-    const num = parseFloat(v);
-    return isNaN(num) ? 0 : num;
-  };
+  const toNumber = (v: string) => parseFloat(v) || 0;
 
   const results = useMemo(() => {
     const currentAge = toNumber(inputs.currentAge);
@@ -74,20 +63,6 @@ export default function RetirementPlan() {
     const pvdReturn = toNumber(inputs.pvdReturn);
     const pvdMonthly = toNumber(inputs.pvdMonthly);
     const pvdCurrent = toNumber(inputs.pvdCurrent);
-
-    if (!retireAge || !lifeExpectancy || !currentExpense) {
-      return {
-        yearsToRetire: 0,
-        yearsAfterRetire: 0,
-        futureExpense: 0,
-        realRate: 0,
-        totalNeeded: 0,
-        totalPVD: 0,
-        shortage: 0,
-        additionalSavings: 0,
-        totalMonthlySavings: 0,
-      };
-    }
 
     const yearsToRetire = retireAge - currentAge;
     const yearsAfterRetire = lifeExpectancy - retireAge;
@@ -108,10 +83,7 @@ export default function RetirementPlan() {
     if (Math.abs(rMonthly - gMonthly) < 0.0001) {
       pvdMonthlySavings = pvdMonthly * monthsToRetire * Math.pow(1 + rMonthly, monthsToRetire);
     } else {
-      const factor =
-        (Math.pow(1 + rMonthly, monthsToRetire) -
-          Math.pow(1 + gMonthly, monthsToRetire)) /
-        (rMonthly - gMonthly);
+      const factor = (Math.pow(1 + rMonthly, monthsToRetire) - Math.pow(1 + gMonthly, monthsToRetire)) / (rMonthly - gMonthly);
       pvdMonthlySavings = pvdMonthly * factor;
     }
 
@@ -134,7 +106,7 @@ export default function RetirementPlan() {
   }, [inputs]);
 
   const formatNumber = (num: number) =>
-    new Intl.NumberFormat("th-TH", { maximumFractionDigits: 0 }).format(num);
+    new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 }).format(num);
 
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
@@ -146,7 +118,7 @@ export default function RetirementPlan() {
         {/* ข้อมูลพื้นฐาน */}
         <div className="bg-white rounded-lg p-6 mb-6 border-l-4 border-blue-500">
           <h2 className="text-lg font-bold text-gray-800 mb-4">ข้อมูลพื้นฐาน</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InputField label="อายุปัจจุบัน" keyName="currentAge" value={inputs.currentAge} onChange={handleChange} suffix="ปี" />
             <InputField label="อายุเกษียณ" keyName="retireAge" value={inputs.retireAge} onChange={handleChange} suffix="ปี" />
             <InputField label="อายุขัย" keyName="lifeExpectancy" value={inputs.lifeExpectancy} onChange={handleChange} suffix="ปี" />
@@ -165,7 +137,7 @@ export default function RetirementPlan() {
         {/* อัตราต่างๆ */}
         <div className="bg-white rounded-lg p-6 mb-6 border-l-4 border-blue-500">
           <h2 className="text-lg font-bold text-gray-800 mb-4">อัตราต่างๆ</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InputField label="อัตราเงินเฟ้อ" keyName="inflationRate" value={inputs.inflationRate} onChange={handleChange} suffix="%" />
             <InputField label="การเพิ่มเงินเดือน" keyName="salaryGrowth" value={inputs.salaryGrowth} onChange={handleChange} suffix="%" />
             <InputField label="ผลตอบแทนหลังเกษียณ" keyName="returnAfterRetire" value={inputs.returnAfterRetire} onChange={handleChange} suffix="%" />
@@ -180,7 +152,7 @@ export default function RetirementPlan() {
         {/* PVD */}
         <div className="bg-white rounded-lg p-6 mb-6 border-l-4 border-orange-500">
           <h2 className="text-lg font-bold text-gray-800 mb-4">ข้อมูลกองทุนสำรองเลี้ยงชีพ (PVD)</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InputField label="เงินสะสมกองทุนต่อเดือน" keyName="pvdMonthly" value={inputs.pvdMonthly} onChange={handleChange} suffix="บาท" />
             <InputField label="มูลค่ากองทุนปัจจุบัน" keyName="pvdCurrent" value={inputs.pvdCurrent} onChange={handleChange} suffix="บาท" />
           </div>
@@ -207,20 +179,6 @@ export default function RetirementPlan() {
             <div className="text-gray-700 mb-2">รวมการออมต่อเดือนทั้งหมด</div>
             <div className="text-3xl font-bold text-blue-600">{formatNumber(results.totalMonthlySavings)} บาท</div>
           </div>
-        </div>
-
-        {/* ปุ่มรีเซ็ต */}
-        <div className="flex justify-center pb-8">
-          <button
-            onClick={handleReset}
-            className="px-8 py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg 
-                       transition-colors duration-200 flex items-center gap-2 shadow-md"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-            </svg>
-            รีเซ็ตข้อมูล
-          </button>
         </div>
       </div>
     </div>
