@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 
 interface Article {
   id: string;
@@ -7,6 +8,21 @@ interface Article {
   description: string;
   url: string;
   image?: string;
+}
+
+// สำหรับ API newsdata.io
+interface ApiArticle {
+  title?: string;
+  description?: string;
+  link: string;
+  image_url?: string;
+}
+
+interface ApiResponse {
+  results?: ApiArticle[];
+  data?: ApiArticle[];
+  articles?: ApiArticle[];
+  [key: string]: any;
 }
 
 export default function ArticleSection() {
@@ -37,49 +53,34 @@ export default function ArticleSection() {
           ),
         ]);
 
-        const [taxData, retirementData, savingsData] = await Promise.all([
-          taxRes.json(),
-          retirementRes.json(),
-          savingsRes.json(),
-        ]);
+        const [taxData, retirementData, savingsData]: ApiResponse[] =
+          await Promise.all([taxRes.json(), retirementRes.json(), savingsRes.json()]);
 
-        setTaxArticles(
-          (taxData.results || [])
-            .slice(0, 8)
-            .map((a: any, i: number) => ({
-              id: `tax-${i}`,
-              title: a.title || "ไม่มีหัวข้อ",
-              description: a.description || "ไม่มีรายละเอียด",
-              url: a.link,
-              image: a.image_url || "",
-            }))
-        );
+        const toArticles = (data: ApiResponse, prefix: string): Article[] => {
+          // ตรวจว่า data.results/data.data/data.articles เป็น array หรือไม่
+          const list: ApiArticle[] =
+            Array.isArray(data.results)
+              ? data.results
+              : Array.isArray(data.data)
+              ? data.data
+              : Array.isArray(data.articles)
+              ? data.articles
+              : [];
 
-        setRetirementArticles(
-          (retirementData.results || [])
-            .slice(0, 8)
-            .map((a: any, i: number) => ({
-              id: `ret-${i}`,
-              title: a.title || "ไม่มีหัวข้อ",
-              description: a.description || "ไม่มีรายละเอียด",
-              url: a.link,
-              image: a.image_url || "",
-            }))
-        );
+          return list.slice(0, 8).map((a, i) => ({
+            id: `${prefix}-${i}`,
+            title: a.title || "ไม่มีหัวข้อ",
+            description: a.description || "ไม่มีรายละเอียด",
+            url: a.link,
+            image: a.image_url || "",
+          }));
+        };
 
-        setSavingsArticles(
-          (savingsData.results || [])
-            .slice(0, 8)
-            .map((a: any, i: number) => ({
-              id: `sav-${i}`,
-              title: a.title || "ไม่มีหัวข้อ",
-              description: a.description || "ไม่มีรายละเอียด",
-              url: a.link,
-              image: a.image_url || "",
-            }))
-        );
+        setTaxArticles(toArticles(taxData, "tax"));
+        setRetirementArticles(toArticles(retirementData, "ret"));
+        setSavingsArticles(toArticles(savingsData, "sav"));
       } catch (error) {
-        console.error("Error fetching articles:", error);
+        console.error("❌ Error fetching articles:", error);
       } finally {
         setLoading(false);
       }
@@ -90,6 +91,7 @@ export default function ArticleSection() {
 
   const scrollLeft = (key: keyof typeof scrollRefs) =>
     scrollRefs[key].current?.scrollBy({ left: -320, behavior: "smooth" });
+
   const scrollRight = (key: keyof typeof scrollRefs) =>
     scrollRefs[key].current?.scrollBy({ left: 320, behavior: "smooth" });
 
@@ -102,10 +104,12 @@ export default function ArticleSection() {
         >
           <div className="relative h-36 w-full bg-gray-200">
             {article.image ? (
-              <img
+              <Image
                 src={article.image}
                 alt={article.title}
-                className="h-full w-full object-cover"
+                width={320}
+                height={180}
+                className="object-cover w-full h-full"
               />
             ) : (
               <div className="flex items-center justify-center text-4xl text-green-700 w-full h-full">
@@ -146,74 +150,84 @@ export default function ArticleSection() {
     <section id="articles" className="w-full max-w-6xl mx-auto px-6 mb-20 relative">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">📌 บทความล่าสุด</h2>
 
-      {/* ภาษี */}
-      <div className="mb-10 relative">
-        <h3 className="font-semibold text-lg mb-4">🧾 ภาษี</h3>
-        <button
-          onClick={() => scrollLeft("tax")}
-          className="absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full p-2 hover:bg-green-100 z-10"
-        >
-          ◀
-        </button>
-        <button
-          onClick={() => scrollRight("tax")}
-          className="absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full p-2 hover:bg-green-100 z-10"
-        >
-          ▶
-        </button>
-        <div
-          ref={scrollRefs.tax}
-          className="flex gap-6 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth"
-        >
-          {loading ? renderLoader() : renderArticles(taxArticles)}
-        </div>
-      </div>
+      <ArticleRow
+        title="🧾 ภาษี"
+        scrollRef={scrollRefs.tax}
+        articles={taxArticles}
+        loading={loading}
+        scrollLeft={() => scrollLeft("tax")}
+        scrollRight={() => scrollRight("tax")}
+        renderArticles={renderArticles}
+        renderLoader={renderLoader}
+      />
 
-      {/* การวางแผนเกษียณ */}
-      <div className="mb-10 relative">
-        <h3 className="font-semibold text-lg mb-4">🏖️ การวางแผนเกษียณ</h3>
-        <button
-          onClick={() => scrollLeft("retirement")}
-          className="absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full p-2 hover:bg-green-100 z-10"
-        >
-          ◀
-        </button>
-        <button
-          onClick={() => scrollRight("retirement")}
-          className="absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full p-2 hover:bg-green-100 z-10"
-        >
-          ▶
-        </button>
-        <div
-          ref={scrollRefs.retirement}
-          className="flex gap-6 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth"
-        >
-          {loading ? renderLoader() : renderArticles(retirementArticles)}
-        </div>
-      </div>
+      <ArticleRow
+        title="🏖️ การวางแผนเกษียณ"
+        scrollRef={scrollRefs.retirement}
+        articles={retirementArticles}
+        loading={loading}
+        scrollLeft={() => scrollLeft("retirement")}
+        scrollRight={() => scrollRight("retirement")}
+        renderArticles={renderArticles}
+        renderLoader={renderLoader}
+      />
 
-      {/* การออมเงิน */}
-      <div className="mb-10 relative">
-        <h3 className="font-semibold text-lg mb-4">💰 การออมเงิน</h3>
-        <button
-          onClick={() => scrollLeft("savings")}
-          className="absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full p-2 hover:bg-green-100 z-10"
-        >
-          ◀
-        </button>
-        <button
-          onClick={() => scrollRight("savings")}
-          className="absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full p-2 hover:bg-green-100 z-10"
-        >
-          ▶
-        </button>
-        <div
-          ref={scrollRefs.savings}
-          className="flex gap-6 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth"
-        >
-          {loading ? renderLoader() : renderArticles(savingsArticles)}
-        </div>
-      </div>
+      <ArticleRow
+        title="💰 การออมเงิน"
+        scrollRef={scrollRefs.savings}
+        articles={savingsArticles}
+        loading={loading}
+        scrollLeft={() => scrollLeft("savings")}
+        scrollRight={() => scrollRight("savings")}
+        renderArticles={renderArticles}
+        renderLoader={renderLoader}
+      />
     </section>
+  );
+}
+
+interface ArticleRowProps {
+  title: string;
+  scrollRef: React.RefObject<HTMLDivElement>;
+  articles: Article[];
+  loading: boolean;
+  scrollLeft: () => void;
+  scrollRight: () => void;
+  renderArticles: (articles: Article[]) => JSX.Element;
+  renderLoader: () => JSX.Element[];
+}
+
+function ArticleRow({
+  title,
+  scrollRef,
+  articles,
+  loading,
+  scrollLeft,
+  scrollRight,
+  renderArticles,
+  renderLoader,
+}: ArticleRowProps) {
+  return (
+    <div className="mb-10 relative">
+      <h3 className="font-semibold text-lg mb-4">{title}</h3>
+      <button
+        onClick={scrollLeft}
+        className="absolute left-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full p-2 hover:bg-green-100 z-10"
+      >
+        ◀
+      </button>
+      <button
+        onClick={scrollRight}
+        className="absolute right-0 top-1/2 -translate-y-1/2 bg-white shadow-md rounded-full p-2 hover:bg-green-100 z-10"
+      >
+        ▶
+      </button>
+      <div
+        ref={scrollRef}
+        className="flex gap-6 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-smooth"
+      >
+        {loading ? renderLoader() : renderArticles(articles)}
+      </div>
+    </div>
   );
 }
