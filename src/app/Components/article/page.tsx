@@ -10,7 +10,6 @@ interface Article {
   image?: string;
 }
 
-// สำหรับ API newsdata.io
 interface ApiArticle {
   title?: string;
   description?: string;
@@ -32,9 +31,9 @@ export default function ArticleSection() {
   const [loading, setLoading] = useState(true);
 
   const scrollRefs = {
-    tax: useRef<HTMLDivElement | null>(null),
-    retirement: useRef<HTMLDivElement | null>(null),
-    savings: useRef<HTMLDivElement | null>(null),
+    tax: useRef<HTMLDivElement>(null),
+    retirement: useRef<HTMLDivElement>(null),
+    savings: useRef<HTMLDivElement>(null),
   };
 
   useEffect(() => {
@@ -187,7 +186,7 @@ export default function ArticleSection() {
 
 interface ArticleRowProps {
   title: string;
-  scrollRef: React.RefObject<HTMLDivElement | null>;
+  scrollRef: React.RefObject<HTMLDivElement>;
   articles: Article[];
   loading: boolean;
   scrollLeft: () => void;
