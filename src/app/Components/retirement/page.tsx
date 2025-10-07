@@ -9,7 +9,10 @@ interface InputFieldProps {
   value: string;
   onChange: (key: string, value: string) => void;
   placeholder?: string;
-  info?: string; // ✅ tooltip support
+  info?: string; // tooltip support
+  min?: number;
+  max?: number;
+  relatedValue?: number;
 }
 
 const InputField = memo(
@@ -21,8 +24,10 @@ const InputField = memo(
     onChange,
     placeholder = "",
     info,
+    min,
+    max,
+    relatedValue,
   }: InputFieldProps) => {
-    // ✅ แปลงตัวเลขเป็น comma format
     const formatNumber = (num: string) => {
       const cleaned = num.replace(/,/g, "");
       if (cleaned === "" || isNaN(Number(cleaned))) return "";
@@ -33,14 +38,34 @@ const InputField = memo(
 
     const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
       const raw = e.target.value.replace(/,/g, "");
-      if (/^\d*\.?\d*$/.test(raw)) onChange(keyName, raw);
+      // อนุญาตให้พิมพ์ตัวเลขและจุดทศนิยม
+      if (/^\d*\.?\d*$/.test(raw)) {
+        onChange(keyName, raw);
+      }
     };
+
+    // ตรวจ validation
+    const numberValue = parseFloat(value) || 0;
+    let error = "";
+    if (min !== undefined && numberValue < min) {
+      error = `ต้องมากกว่าหรือเท่ากับ ${min}`;
+    } else if (max !== undefined && numberValue > max) {
+      error = `ต้องน้อยกว่าหรือเท่ากับ ${max}`;
+    } else if (
+      relatedValue !== undefined &&
+      ((keyName === "retireAge" && numberValue <= relatedValue) ||
+        (keyName === "lifeExpectancy" && numberValue <= relatedValue))
+    ) {
+      error =
+        keyName === "retireAge"
+          ? `ต้องมากกว่าอายุปัจจุบัน`
+          : `ต้องมากกว่าอายุเกษียณ`;
+    }
 
     return (
       <div className="bg-gray-50 p-3 rounded relative">
-        <label className="text-sm text-gray-600 block mb-1 flex items-center gap-1">
+        <label className="text-sm text-gray-600 mb-1 flex items-center gap-1">
           {label}
-          {/* ✅ Tooltip “i” */}
           {info && (
             <div className="relative group cursor-pointer">
               <div className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-200 text-gray-900 text-xs font-bold">
@@ -53,25 +78,29 @@ const InputField = memo(
           )}
         </label>
 
-        <div className="flex items-center gap-2">
-          <input
-            inputMode="decimal"
-            value={formatNumber(value)}
-            onChange={handleInput}
-            placeholder={placeholder}
-            className="flex-1 min-w-0 w-full px-3 py-2 border border-gray-300 rounded text-right
-                       focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 font-medium"
-          />
-          {suffix && (
-            <span className="text-sm text-gray-600 whitespace-nowrap">
-              {suffix}
-            </span>
-          )}
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <input
+              id={keyName}
+              inputMode="decimal"
+              value={formatNumber(value)}
+              onChange={handleInput}
+              placeholder={placeholder}
+              className={`flex-1 min-w-0 w-full px-3 py-2 border rounded text-left focus:outline-none focus:ring-2 font-semibold ${
+                error ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
+              } text-gray-900`}
+            />
+            {suffix && (
+              <span className="text-sm text-gray-600 whitespace-nowrap">{suffix}</span>
+            )}
+          </div>
+          {error && <div className="text-red-500 text-xs">{error}</div>}
         </div>
       </div>
     );
   }
 );
+
 InputField.displayName = "InputField";
 
 const DEFAULT_INPUTS = {
@@ -79,7 +108,7 @@ const DEFAULT_INPUTS = {
   retireAge: "",
   lifeExpectancy: "",
   currentExpense: "",
-  inflationRate: "",
+  inflationRate: "3",
   salaryGrowth: "",
   returnAfterRetire: "",
   pvdReturn: "",
@@ -143,15 +172,12 @@ export default function RetirementPlan() {
 
     const pvFactor =
       Math.abs(realRateMonthly) > 1e-12
-        ? (1 - Math.pow(1 + realRateMonthly, -monthsAfterRetire)) /
-          realRateMonthly
+        ? (1 - Math.pow(1 + realRateMonthly, -monthsAfterRetire)) / realRateMonthly
         : monthsAfterRetire;
 
     const totalNeeded = futureExpense * pvFactor;
 
-    const pvdCurrentFuture =
-      pvdCurrent * Math.pow(1 + pvdReturn / 100, yearsToRetire);
-
+    const pvdCurrentFuture = pvdCurrent * Math.pow(1 + pvdReturn / 100, yearsToRetire);
     const rMonthly = pvdReturn / 100 / 12;
     const gMonthly = salaryGrowth / 100 / 12;
 
@@ -201,13 +227,43 @@ export default function RetirementPlan() {
 
         {/* ข้อมูลพื้นฐาน */}
         <div className="bg-white rounded-lg p-6 mb-6 border-l-4 border-blue-500">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">
-            ข้อมูลพื้นฐาน
-          </h2>
+          <h2 className="text-lg font-bold text-gray-800 mb-4">ข้อมูลพื้นฐาน</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <InputField label="อายุปัจจุบัน" keyName="currentAge" value={inputs.currentAge} onChange={handleChange} suffix="ปี" placeholder="เช่น 30000"/>
-            <InputField label="อายุเกษียณ" keyName="retireAge" value={inputs.retireAge} onChange={handleChange} suffix="ปี" placeholder="เช่น 30000"/>
-            <InputField label="อายุขัย" keyName="lifeExpectancy" value={inputs.lifeExpectancy} onChange={handleChange} suffix="ปี" placeholder="เช่น 30000" />
+            <InputField
+              label="อายุปัจจุบัน"
+              keyName="currentAge"
+              value={inputs.currentAge}
+              onChange={handleChange}
+              suffix="ปี"
+              placeholder="เช่น 30"
+              min={0}
+              max={120}
+              info="กรอกอายุปัจจุบัน (0-120 ปี)"
+            />
+            <InputField
+              label="อายุเกษียณ"
+              keyName="retireAge"
+              value={inputs.retireAge}
+              onChange={handleChange}
+              suffix="ปี"
+              placeholder="เช่น 60"
+              min={toNumber(inputs.currentAge) + 1}
+              max={100}
+              relatedValue={toNumber(inputs.currentAge)}
+              info="ต้องมากกว่าอายุปัจจุบัน"
+            />
+            <InputField
+              label="อายุขัย"
+              keyName="lifeExpectancy"
+              value={inputs.lifeExpectancy}
+              onChange={handleChange}
+              suffix="ปี"
+              placeholder="เช่น 80"
+              min={toNumber(inputs.retireAge) + 1}
+              max={150}
+              relatedValue={toNumber(inputs.retireAge)}
+              info="ต้องมากกว่าอายุเกษียณ"
+            />          
             <div className="bg-gray-50 p-3 rounded">
               <div className="text-sm text-gray-600 mb-1">ระยะเวลาออม</div>
               <div className="text-lg font-bold text-gray-800">
@@ -232,12 +288,26 @@ export default function RetirementPlan() {
             <InputField label="การเพิ่มเงินเดือน" keyName="salaryGrowth" value={inputs.salaryGrowth} onChange={handleChange} suffix="%" placeholder="เช่น 0" info="อัตราการขึ้นเงินเดือนเฉลี่ยต่อปี" />
             <InputField label="ผลตอบแทนหลังเกษียณ" keyName="returnAfterRetire" value={inputs.returnAfterRetire} onChange={handleChange} suffix="%" placeholder="เช่น 4" info="ผลตอบแทนเฉลี่ยจากการลงทุนหลังเกษียณ" />
             <InputField label="ผลตอบแทนกองทุน (PVD)" keyName="pvdReturn" value={inputs.pvdReturn} onChange={handleChange} suffix="%" placeholder="เช่น 4" info="ผลตอบแทนเฉลี่ยต่อปีของกองทุนสำรองเลี้ยงชีพ" />
-            <div className="bg-gray-100 p-3 rounded col-span-full">
-              <div className="text-sm text-gray-600 mb-1">Real Return Rate</div>
-              <div className="text-lg font-bold text-blue-600">
-                {results.realRate.toFixed(2)}%
+            <div className="bg-gray-100 p-3 rounded col-span-full relative">
+            <div className="flex items-center justify-between mb-1">
+              <div className="text-sm text-gray-600 flex items-center gap-1">
+                Real Return Rate
+                {/* ✅ Tooltip */}
+                <div className="relative group cursor-pointer">
+                  <div className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-200 text-gray-900 text-xs font-bold">
+                    i
+                  </div>
+                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-44 bg-gray-800 text-white text-xs rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    ผลตอบแทนหลังหักเงินเฟ้อ
+                  </div>
+                </div>
               </div>
             </div>
+            <div className="text-lg font-bold text-blue-600">
+              {results.realRate.toFixed(2)}%
+            </div>
+          </div>
+
           </div>
         </div>
 
