@@ -1,35 +1,66 @@
 "use client";
 
 import React, { useState, useMemo, useCallback, memo } from "react";
+
 interface InputFieldProps {
   label: string;
   keyName: string;
   suffix?: string;
   value: string;
   onChange: (key: string, value: string) => void;
+  placeholder?: string;
+  info?: string; // ✅ tooltip support
 }
 
 const InputField = memo(
-  ({ label, keyName, suffix = "", value, onChange }: InputFieldProps) => {
+  ({
+    label,
+    keyName,
+    suffix = "",
+    value,
+    onChange,
+    placeholder = "",
+    info,
+  }: InputFieldProps) => {
+    // ✅ แปลงตัวเลขเป็น comma format
+    const formatNumber = (num: string) => {
+      const cleaned = num.replace(/,/g, "");
+      if (cleaned === "" || isNaN(Number(cleaned))) return "";
+      const parts = cleaned.split(".");
+      parts[0] = Number(parts[0]).toLocaleString("th-TH");
+      return parts.join(".");
+    };
+
     const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = e.target.value;
-      if (/^-?\d*\.?\d*$/.test(val) || val === "") {
-        onChange(keyName, val);
-      }
+      const raw = e.target.value.replace(/,/g, "");
+      if (/^\d*\.?\d*$/.test(raw)) onChange(keyName, raw);
     };
 
     return (
-      <div className="bg-gray-50 p-3 rounded">
-        <label className="text-sm text-gray-600 block mb-1">{label}</label>
+      <div className="bg-gray-50 p-3 rounded relative">
+        <label className="text-sm text-gray-600 block mb-1 flex items-center gap-1">
+          {label}
+          {/* ✅ Tooltip “i” */}
+          {info && (
+            <div className="relative group cursor-pointer">
+              <div className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-200 text-gray-900 text-xs font-bold">
+                i
+              </div>
+              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-56 bg-gray-800 text-white text-xs rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                {info}
+              </div>
+            </div>
+          )}
+        </label>
+
         <div className="flex items-center gap-2">
           <input
-            type="text"
             inputMode="decimal"
-            value={value}
+            value={formatNumber(value)}
             onChange={handleInput}
-            className="flex-1 min-w-0 w-full px-3 py-2 border border-gray-300 rounded 
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 
-                     text-gray-800 font-medium"
+            placeholder={placeholder}
+            className="flex-1 min-w-0 w-full px-3 py-2 border border-gray-300 rounded text-right
+                       focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 font-medium"
           />
           {suffix && (
             <span className="text-sm text-gray-600 whitespace-nowrap">
@@ -43,31 +74,34 @@ const InputField = memo(
 );
 InputField.displayName = "InputField";
 
-export default function RetirementPlan() {
-  const defaultInputs = {
-    currentAge: "0",
-    retireAge: "0",
-    lifeExpectancy: "0",
-    currentExpense: "0",
-    inflationRate: "0",
-    salaryGrowth: "3",
-    returnAfterRetire: "0",
-    pvdReturn: "0",
-    pvdMonthly: "0",
-    pvdCurrent: "0",
-  };
+const DEFAULT_INPUTS = {
+  currentAge: "",
+  retireAge: "",
+  lifeExpectancy: "",
+  currentExpense: "",
+  inflationRate: "",
+  salaryGrowth: "",
+  returnAfterRetire: "",
+  pvdReturn: "",
+  pvdMonthly: "",
+  pvdCurrent: "",
+};
 
-  const [inputs, setInputs] = useState(defaultInputs);
+export default function RetirementPlan() {
+  const [inputs, setInputs] = useState({ ...DEFAULT_INPUTS });
 
   const handleChange = useCallback((key: string, value: string) => {
     setInputs((prev) => ({ ...prev, [key]: value }));
   }, []);
 
   const handleReset = useCallback(() => {
-    setInputs(defaultInputs);
+    setInputs({ ...DEFAULT_INPUTS });
   }, []);
 
-  const toNumber = (v: string) => parseFloat(v) || 0;
+  const toNumber = (v: string) => {
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : 0;
+  };
 
   const results = useMemo(() => {
     const currentAge = toNumber(inputs.currentAge);
@@ -81,7 +115,7 @@ export default function RetirementPlan() {
     const pvdMonthly = toNumber(inputs.pvdMonthly);
     const pvdCurrent = toNumber(inputs.pvdCurrent);
 
-    if (!retireAge || !lifeExpectancy || !currentExpense) {
+    if (retireAge <= currentAge || lifeExpectancy <= retireAge || currentExpense <= 0) {
       return {
         yearsToRetire: 0,
         yearsAfterRetire: 0,
@@ -102,34 +136,45 @@ export default function RetirementPlan() {
 
     const futureExpense =
       currentExpense * Math.pow(1 + inflationRate / 100, yearsToRetire);
+
     const realRate =
       (1 + returnAfterRetire / 100) / (1 + inflationRate / 100) - 1;
     const realRateMonthly = realRate / 12;
+
     const pvFactor =
-      (1 - Math.pow(1 + realRateMonthly, -monthsAfterRetire)) / realRateMonthly;
+      Math.abs(realRateMonthly) > 1e-12
+        ? (1 - Math.pow(1 + realRateMonthly, -monthsAfterRetire)) /
+          realRateMonthly
+        : monthsAfterRetire;
+
     const totalNeeded = futureExpense * pvFactor;
 
     const pvdCurrentFuture =
       pvdCurrent * Math.pow(1 + pvdReturn / 100, yearsToRetire);
+
     const rMonthly = pvdReturn / 100 / 12;
     const gMonthly = salaryGrowth / 100 / 12;
-    let pvdMonthlySavings = 0;
 
-    if (Math.abs(rMonthly - gMonthly) < 0.0001) {
+    let pvdMonthlySavings = 0;
+    if (Math.abs(rMonthly - gMonthly) < 1e-12) {
       pvdMonthlySavings =
-        pvdMonthly * monthsToRetire * Math.pow(1 + rMonthly, monthsToRetire);
+        pvdMonthly * monthsToRetire * Math.pow(1 + rMonthly, monthsToRetire - 1);
     } else {
-      const factor =
-        (Math.pow(1 + rMonthly, monthsToRetire) -
-          Math.pow(1 + gMonthly, monthsToRetire)) /
-        (rMonthly - gMonthly);
-      pvdMonthlySavings = pvdMonthly * factor;
+      const numerator =
+        Math.pow(1 + rMonthly, monthsToRetire) -
+        Math.pow(1 + gMonthly, monthsToRetire);
+      pvdMonthlySavings = pvdMonthly * (numerator / (rMonthly - gMonthly));
     }
 
     const totalPVD = pvdCurrentFuture + pvdMonthlySavings;
     const shortage = totalNeeded - totalPVD;
-    const fvFactor = (Math.pow(1 + rMonthly, monthsToRetire) - 1) / rMonthly;
-    const additionalSavings = shortage / fvFactor;
+
+    const fvFactor =
+      Math.abs(rMonthly) > 1e-12
+        ? (Math.pow(1 + rMonthly, monthsToRetire) - 1) / rMonthly
+        : monthsToRetire;
+
+    const additionalSavings = shortage > 0 ? shortage / fvFactor : 0;
 
     return {
       yearsToRetire,
@@ -144,8 +189,8 @@ export default function RetirementPlan() {
     };
   }, [inputs]);
 
-  const formatNumber = (num: number) =>
-    new Intl.NumberFormat("th-TH", { maximumFractionDigits: 0 }).format(num);
+  const formatNumber = (num: number, maximumFractionDigits = 0) =>
+    new Intl.NumberFormat("th-TH", { maximumFractionDigits }).format(num);
 
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
@@ -159,28 +204,10 @@ export default function RetirementPlan() {
           <h2 className="text-lg font-bold text-gray-800 mb-4">
             ข้อมูลพื้นฐาน
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-            <InputField
-              label="อายุปัจจุบัน"
-              keyName="currentAge"
-              value={inputs.currentAge}
-              onChange={handleChange}
-              suffix="ปี"
-            />
-            <InputField
-              label="อายุเกษียณ"
-              keyName="retireAge"
-              value={inputs.retireAge}
-              onChange={handleChange}
-              suffix="ปี"
-            />
-            <InputField
-              label="อายุขัย"
-              keyName="lifeExpectancy"
-              value={inputs.lifeExpectancy}
-              onChange={handleChange}
-              suffix="ปี"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <InputField label="อายุปัจจุบัน" keyName="currentAge" value={inputs.currentAge} onChange={handleChange} suffix="ปี" placeholder="เช่น 30000"/>
+            <InputField label="อายุเกษียณ" keyName="retireAge" value={inputs.retireAge} onChange={handleChange} suffix="ปี" placeholder="เช่น 30000"/>
+            <InputField label="อายุขัย" keyName="lifeExpectancy" value={inputs.lifeExpectancy} onChange={handleChange} suffix="ปี" placeholder="เช่น 30000" />
             <div className="bg-gray-50 p-3 rounded">
               <div className="text-sm text-gray-600 mb-1">ระยะเวลาออม</div>
               <div className="text-lg font-bold text-gray-800">
@@ -193,48 +220,18 @@ export default function RetirementPlan() {
                 {results.yearsAfterRetire} ปี
               </div>
             </div>
-            <InputField
-              label="ค่าใช้จ่ายปัจจุบัน"
-              keyName="currentExpense"
-              value={inputs.currentExpense}
-              onChange={handleChange}
-              suffix="บาท/เดือน"
-            />
+            <InputField label="ค่าใช้จ่ายปัจจุบัน" keyName="currentExpense" value={inputs.currentExpense} onChange={handleChange} suffix="บาท/เดือน" placeholder="เช่น 30000" info="ค่าใช้จ่ายเฉลี่ยต่อเดือนในปัจจุบัน" />
           </div>
         </div>
 
         {/* อัตราต่างๆ */}
         <div className="bg-white rounded-lg p-6 mb-6 border-l-4 border-blue-500">
           <h2 className="text-lg font-bold text-gray-800 mb-4">อัตราต่างๆ</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-            <InputField
-              label="อัตราเงินเฟ้อ"
-              keyName="inflationRate"
-              value={inputs.inflationRate}
-              onChange={handleChange}
-              suffix="%"
-            />
-            <InputField
-              label="การเพิ่มเงินเดือน"
-              keyName="salaryGrowth"
-              value={inputs.salaryGrowth}
-              onChange={handleChange}
-              suffix="%"
-            />
-            <InputField
-              label="ผลตอบแทนหลังเกษียณ"
-              keyName="returnAfterRetire"
-              value={inputs.returnAfterRetire}
-              onChange={handleChange}
-              suffix="%"
-            />
-            <InputField
-              label="ผลตอบแทนกองทุน (PVD)"
-              keyName="pvdReturn"
-              value={inputs.pvdReturn}
-              onChange={handleChange}
-              suffix="%"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <InputField label="อัตราเงินเฟ้อ" keyName="inflationRate" value={inputs.inflationRate} onChange={handleChange} suffix="%" placeholder="เช่น 3" info="โดยทั่วไปอยู่ระหว่าง 2-3% ต่อปี" />
+            <InputField label="การเพิ่มเงินเดือน" keyName="salaryGrowth" value={inputs.salaryGrowth} onChange={handleChange} suffix="%" placeholder="เช่น 0" info="อัตราการขึ้นเงินเดือนเฉลี่ยต่อปี" />
+            <InputField label="ผลตอบแทนหลังเกษียณ" keyName="returnAfterRetire" value={inputs.returnAfterRetire} onChange={handleChange} suffix="%" placeholder="เช่น 4" info="ผลตอบแทนเฉลี่ยจากการลงทุนหลังเกษียณ" />
+            <InputField label="ผลตอบแทนกองทุน (PVD)" keyName="pvdReturn" value={inputs.pvdReturn} onChange={handleChange} suffix="%" placeholder="เช่น 4" info="ผลตอบแทนเฉลี่ยต่อปีของกองทุนสำรองเลี้ยงชีพ" />
             <div className="bg-gray-100 p-3 rounded col-span-full">
               <div className="text-sm text-gray-600 mb-1">Real Return Rate</div>
               <div className="text-lg font-bold text-blue-600">
@@ -249,21 +246,9 @@ export default function RetirementPlan() {
           <h2 className="text-lg font-bold text-gray-800 mb-4">
             ข้อมูลกองทุนสำรองเลี้ยงชีพ (PVD)
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-            <InputField
-              label="เงินสะสมกองทุนต่อเดือน"
-              keyName="pvdMonthly"
-              value={inputs.pvdMonthly}
-              onChange={handleChange}
-              suffix="บาท"
-            />
-            <InputField
-              label="มูลค่ากองทุนปัจจุบัน"
-              keyName="pvdCurrent"
-              value={inputs.pvdCurrent}
-              onChange={handleChange}
-              suffix="บาท"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <InputField label="เงินสะสมกองทุนต่อเดือน" keyName="pvdMonthly" value={inputs.pvdMonthly} onChange={handleChange} suffix="บาท" placeholder="เช่น 5000" info="จำนวนเงินที่ออมเข้ากองทุนต่อเดือน" />
+            <InputField label="มูลค่ากองทุนปัจจุบัน" keyName="pvdCurrent" value={inputs.pvdCurrent} onChange={handleChange} suffix="บาท" placeholder="เช่น 200000" info="ยอดเงินที่มีอยู่ในกองทุนตอนนี้" />
           </div>
         </div>
 
@@ -301,7 +286,7 @@ export default function RetirementPlan() {
                   เงินที่ยังขาด
                 </td>
                 <td className="px-4 py-3 text-right font-mono text-gray-900 font-semibold">
-                  {formatNumber(results.shortage)} บาท
+                  {formatNumber(Math.max(0, results.shortage))} บาท
                 </td>
               </tr>
             </tbody>
@@ -317,7 +302,9 @@ export default function RetirementPlan() {
           </div>
 
           <div className="bg-blue-100 p-6 rounded-lg text-center">
-            <div className="text-gray-700 mb-2">รวมการออมต่อเดือนทั้งหมด</div>
+            <div className="text-gray-700 mb-2">
+              รวมการออมต่อเดือนทั้งหมด
+            </div>
             <div className="text-3xl font-bold text-blue-600">
               {formatNumber(results.totalMonthlySavings)} บาท
             </div>
@@ -328,8 +315,7 @@ export default function RetirementPlan() {
         <div className="flex justify-center pb-8">
           <button
             onClick={handleReset}
-            className="px-8 py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg 
-                       transition-colors duration-200 flex items-center gap-2 shadow-md"
+            className="px-8 py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center gap-2 shadow-md"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

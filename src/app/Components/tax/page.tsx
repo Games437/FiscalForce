@@ -63,6 +63,7 @@ function calculateTax(inputs: {
   ded_donate_education: number; // เพิ่ม
   ded_donate_general: number; // เพิ่ม
   taxWithheld: number;
+  hasChildren: boolean;
 }): TaxResult {
   const salary = inputs.salaryMonthly * 12;
   const salaryExpense = Math.min(salary * 0.5, 100000);
@@ -85,8 +86,17 @@ function calculateTax(inputs: {
   if (inputs.ded_father) deduction += 30000;
   if (inputs.ded_mother) deduction += 30000;
 
-  deduction += inputs.children_before2018 * 30000;
-  deduction += inputs.children_after2018 * 60000;
+   // คำนวณค่าลดหย่อนบุตร
+  if (inputs.hasChildren) {
+    // บุตรคนแรกลดหย่อน 30,000 อัตโนมัติ
+    deduction += 30000;
+    
+    // บุตรเพิ่มเติมที่เกิดก่อน 2561 (ถ้ามี)
+    deduction += inputs.children_before2018 * 30000;
+    
+    // บุตรเพิ่มเติมที่เกิดตั้งแต่ 2561 (ถ้ามี)
+    deduction += inputs.children_after2018 * 60000;
+  }
 
   let disabledCount = 0;
   if (inputs.ded_disabled_father) disabledCount++;
@@ -98,6 +108,7 @@ function calculateTax(inputs: {
   if (inputs.ded_disabled_relative) disabledCount++;
   deduction += disabledCount * 60000;
 
+  // ประกันสังคม
   deduction += Math.min(inputs.ded_social, 9000);
 
   // ประกันชีวิตและสุขภาพ
@@ -173,7 +184,7 @@ function calculateTax(inputs: {
       tax += t;
       breakdown.push({
         range: `${fmtNumber(prev + 1)} - ${
-          isFinite(b.limit) ? fmtNumber(b.limit) : "∞"
+          isFinite(b.limit) ? fmtNumber(b.limit) : "ไม่จำกัด"
         }`,
         amount: amt,
         rate: b.rate,
@@ -211,10 +222,10 @@ export default function TaxPlannerWizard() {
     ded_homeLoan: "",
     ded_donate: "",
     taxWithheld: "",
-    maritalStatus: "โสด", // เพิ่ม: โสด, หย่า, สมรส
-    ded_father: false, // เพิ่ม
-    ded_mother: false, // เพิ่ม
-    ded_disabled_father: false, // เพิ่ม
+    maritalStatus: "โสด",
+    ded_father: false, 
+    ded_mother: false, 
+    ded_disabled_father: false, 
     ded_disabled_mother: false, // เพิ่ม
     ded_disabled_spouse: false, // เพิ่ม
     ded_disabled_father_spouse: false, // เพิ่ม
@@ -224,10 +235,10 @@ export default function TaxPlannerWizard() {
     hasChildren: false, // เพิ่ม
     children_before2018: "", // เพิ่ม: จำนวนบุตรเกิดก่อน 2561
     children_after2018: "", // เพิ่ม: จำนวนบุตรเกิดตั้งแต่ 2561
-    ded_health_parents: "", // เพิ่ม: เบี้ยประกันสุขภาพบิดา-มารดา
-    ded_pension_insurance: "", // เพิ่ม: เบี้ยประกันชีวิตบำนาญ
-    ded_donate_education: "", // เพิ่ม: บริจาคการศึกษา กีฬา สังคม โรงพยาบาลรัฐ
-    ded_donate_general: "", // เพิ่ม: บริจาคทั่วไป
+    ded_health_parents: "", 
+    ded_pension_insurance: "", 
+    ded_donate_education: "",
+    ded_donate_general: "", 
   });
   const [result, setResult] = useState<TaxResult | null>(null);
   const chartRef = useRef<HTMLCanvasElement>(null);
@@ -322,6 +333,7 @@ export default function TaxPlannerWizard() {
       ded_disabled_relative: Boolean(data.ded_disabled_relative),
       children_before2018: parseNumber(String(data.children_before2018)),
       children_after2018: parseNumber(String(data.children_after2018)),
+      hasChildren: Boolean(data.hasChildren), // เพิ่ม
       ded_social: parseNumber(String(data.ded_social)),
       ded_insurance: parseNumber(String(data.ded_insurance)),
       ded_health: parseNumber(String(data.ded_health)),
@@ -340,68 +352,86 @@ export default function TaxPlannerWizard() {
   };
 
   /* ---------- Draw Chart ---------- */
-  useEffect(() => {
+useEffect(() => {
     if (!chartRef.current || !result) return;
 
-    const dataChart = {
-      labels: result.breakdown.map((b) => b.range),
-      datasets: [
-        {
-          label: "เงินได้ที่เสียภาษี",
-          data: result.breakdown.map((b) => b.amount),
-          backgroundColor: "#60a5fa", // น้ำเงิน
-          borderRadius: 6,
-        },
-        {
-          label: "ภาษีแต่ละขั้น",
-          data: result.breakdown.map((b) => b.tax),
-          backgroundColor: "#34d399", // เขียว
-          borderRadius: 6,
-        },
-      ],
-    };
+    const ctx = chartRef.current.getContext("2d");
+    if (!ctx) return;
 
+    // ถ้ามีกราฟอยู่แล้วให้ลบก่อน
     if (chartInstance.current) {
-      chartInstance.current.data = dataChart;
-      chartInstance.current.update();
-    } else {
-      chartInstance.current = new Chart(chartRef.current, {
-        type: "bar",
-        data: dataChart,
-        options: {
-          responsive: true,
-          plugins: {
-            legend: {
-              position: "bottom",
-              labels: { padding: 15, boxWidth: 20 },
-            },
-            tooltip: {
-              mode: "index",
-              intersect: false,
-              callbacks: {
-                label: function (context) {
-                  return `${context.dataset.label}: ${fmtNumber(
-                    context.parsed.y
-                  )} บาท`;
-                },
+      chartInstance.current.destroy();
+    }
+
+    // เตรียมข้อมูล
+    const labels = result.breakdown.map((b, i) => `ขั้นที่ ${i + 1}`);
+    const data = result.breakdown.map((b) => b.tax);
+    const totalTax = result.tax;
+    const totalIncome = result.totalIncome;
+    const taxRate = ((totalTax / totalIncome) * 100).toFixed(2);
+
+    chartInstance.current = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "ภาษีที่ต้องจ่ายในแต่ละขั้น (บาท)",
+            data,
+            borderWidth: 0,
+            backgroundColor: result.breakdown.map((b, i) =>
+              i === result.breakdown.length - 1 ? "#a3e635" : "#fde047"
+            ),
+            borderRadius: 12,
+            borderSkipped: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "rgba(0,0,0,0.8)",
+            titleFont: { size: 14 },
+            bodyFont: { size: 13 },
+            padding: 10,
+            callbacks: {
+              title: (ctx) => `ขั้นที่ ${ctx[0].dataIndex + 1}`,
+              label: (ctx) => {
+                const b = result.breakdown[ctx.dataIndex];
+                return [
+                  `ช่วงรายได้: ${b.range}`,
+                  `อัตราภาษี: ${(b.rate * 100).toFixed(0)}%`,
+                  `ภาษีที่จ่าย: ${fmtNumber(b.tax)} บาท`,
+                ];
               },
             },
           },
-          interaction: {
-            mode: "index" as const,
-            intersect: false,
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: "#444", font: { size: 12 } },
           },
-          scales: {
-            x: { stacked: true, title: { display: true, text: "ช่วงเงินได้" } },
-            y: {
-              stacked: true,
-              beginAtZero: true,
-              title: { display: true, text: "จำนวนเงิน (บาท)" },
+          y: {
+            beginAtZero: true,
+            grid: { color: "#eee" },
+            ticks: {
+              color: "#444",
+              font: { size: 12 },
+              callback: (v) => fmtNumber(Number(v)),
             },
+            title: { display: true, text: "ภาษี (บาท)", color: "#666" },
           },
         },
-      });
-    }
+        animation: {
+          duration: 1200,
+          easing: "easeOutQuart",
+        },
+      },
+    });
   }, [result]);
 
   return (
@@ -499,7 +529,6 @@ export default function TaxPlannerWizard() {
                       <div className="md:col-span-2 border-t pt-4">
                         <label className="text-sm font-medium flex items-center gap-1 mb-2">
                           ลดหย่อนบิดา-มารดา (คนละ 30,000 บาท)
-
                           {/* ไอคอน info */}
                           <div className="relative group">
                             <div className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-200 text-gray-900 text-xs font-bold cursor-pointer">
@@ -508,10 +537,10 @@ export default function TaxPlannerWizard() {
 
                             {/* Tooltip */}
                             <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-60 bg-gray-800 text-white text-xs rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity z-50">
-                              พ่อแม่ของคุณต้องมีอายุ 60 ปีขึ้นไป และมีรายได้ต่อปีน้อยกว่า 30,000 บาท
+                              พ่อแม่ของคุณต้องมีอายุ 60 ปีขึ้นไป
+                              และมีรายได้ต่อปีน้อยกว่า 30,000 บาท
                             </div>
                           </div>
-
                         </label>
                         <div className="flex gap-6">
                           <label className="flex items-center gap-2">
@@ -699,19 +728,28 @@ export default function TaxPlannerWizard() {
 
                           {data.hasChildren && (
                             <>
+                              <div className="md:col-span-2 bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                                <p className="text-sm text-yellow-800">
+                                  ✓ บุตรคนแรกจะลดหย่อนอัตโนมัติ <strong>30,000 บาท</strong>
+                                </p>
+                                <p className="text-xs text-yellow-700 mt-1">
+                                  หากมีบุตรเพิ่มเติม กรุณากรอกจำนวนด้านล่าง
+                                </p>
+                              </div>
+
                               <NumInput
-                                label="จำนวนบุตรที่เกิดก่อนปี 2561 (ลดหย่อน 30,000/คน)"
+                                label="จำนวนบุตรเพิ่มเติมที่เกิดก่อนปี 2561 (ลดหย่อน 30,000/คน)"
                                 value={String(data.children_before2018)}
-                                onChange={(v) =>
-                                  setField("children_before2018", v)
-                                }
+                                onChange={(v) => setField("children_before2018", v)}
+                                info="ไม่ต้องนับบุตรคนแรก เฉพาะคนที่ 2, 3, 4... เป็นต้นไป"
+                                full
                               />
                               <NumInput
-                                label="จำนวนบุตรที่เกิดตั้งแต่ปี 2561 (ลดหย่อน 60,000/คน)"
+                                label="จำนวนบุตรเพิ่มเติมที่เกิดตั้งแต่ปี 2561 (ลดหย่อน 60,000/คน)"
                                 value={String(data.children_after2018)}
-                                onChange={(v) =>
-                                  setField("children_after2018", v)
-                                }
+                                onChange={(v) => setField("children_after2018", v)}
+                                info="ไม่ต้องนับบุตรคนแรก เฉพาะคนที่ 2, 3, 4... เป็นต้นไป"
+                                full
                               />
                             </>
                           )}
@@ -823,7 +861,7 @@ export default function TaxPlannerWizard() {
         )}
 
         {/* Step 6 — Result */}
-        {step === 6 && result && (
+        {step === 6 && result && (  // ผลลัพธ์
           <div className="space-y-6">
             <div className="p-6 bg-gray-50 border-2 border-black rounded-xl shadow">
               <h3 className="text-xl font-bold text-gray-900 mb-2">
@@ -837,7 +875,12 @@ export default function TaxPlannerWizard() {
                 ของรายได้ทั้งหมด
               </p>
             </div>
-
+<div className="mt-10 text-center">
+            <p className="text-gray-600 text-lg">อัตราภาษีของคุณอยู่ที่</p>
+              <p className="text-5xl font-bold text-gray-800 mt-1">
+                {(result.breakdown[result.breakdown.length - 1].rate * 100).toFixed(0)}%
+              </p>
+</div>
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-200">
@@ -865,12 +908,17 @@ export default function TaxPlannerWizard() {
               </table>
             </div>
 
-            <div className="mt-8">
-              <canvas ref={chartRef} height={300}></canvas>
+            {/* Chart Section */}
+            <div className="mt-10 text-center">
+              <div className="mt-6 h-[300px]">
+                <canvas ref={chartRef}></canvas>
+              </div>
             </div>
+
           </div>
         )}
       </div>
+
 
       {/* Navigation */}
       <div className="mt-8 flex justify-between">
@@ -930,8 +978,10 @@ function NumInput({
   // 🧮 ฟังก์ชัน format ตัวเลขให้มีลูกน้ำ
   const formatNumber = (num: string) => {
     if (num === "") return "";
-    const parts = num.replace(/,/g, "").split(".");
-    parts[0] = Number(parts[0]).toLocaleString("en-US"); // ใส่ลูกน้ำหลักพัน
+    const cleaned = num.replace(/,/g, "");
+    if (!/^\d+\.?\d*$/.test(cleaned)) return num; // ✅ เพิ่มการตรวจสอบ
+    const parts = cleaned.split(".");
+    parts[0] = Number(parts[0]).toLocaleString("en-US");
     return parts.join(".");
   };
 
@@ -940,7 +990,7 @@ function NumInput({
 
   const handle = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
-    if (/^[0-9,]*\.?[0-9,]*$/.test(v) || v === "") {
+    if (/^[0-9,]*\.?[0-9]*$/.test(v) || v === "") {
       const unformatted = unformatNumber(v);
       onChange(unformatted);
     }

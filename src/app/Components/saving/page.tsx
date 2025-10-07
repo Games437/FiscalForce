@@ -15,11 +15,21 @@ export default function GSBSavingCalculator() {
   const [initialAmount, setInitialAmount] = useState<string>("");
   const [result, setResult] = useState<Result | null>(null);
 
+  /* ---------- Helper Functions ---------- */
+  const formatNumber = (value: string) => {
+    const num = value.replace(/,/g, "");
+    if (num === "" || isNaN(Number(num))) return "";
+    return Number(num).toLocaleString("en-US");
+  };
+
+  const parseNumber = (value: string) => Number(value.replace(/,/g, "")) || 0;
+
+  /* ---------- Handle Calculate ---------- */
   const handleCalculate = () => {
-    const targetVal = Number(targetAmount) || 0;
-    const yearsVal = Number(years) || 0;
-    const rateVal = Number(interestRate) || 0;
-    const initialVal = Number(initialAmount) || 0;
+    const targetVal = parseNumber(targetAmount);
+    const yearsVal = parseNumber(years);
+    const rateVal = parseNumber(interestRate);
+    const initialVal = parseNumber(initialAmount);
 
     const months = yearsVal * 12;
     const monthlyRate = rateVal / 100 / 12;
@@ -52,6 +62,7 @@ export default function GSBSavingCalculator() {
     });
   };
 
+  /* ---------- Handle Clear ---------- */
   const handleClear = () => {
     setTargetAmount("");
     setYears("");
@@ -93,6 +104,7 @@ export default function GSBSavingCalculator() {
             </div>
 
             <div className="grid gap-5">
+              {/* จำนวนเงินที่ต้องการ */}
               <div className="relative">
                 <label
                   className="block text-base font-semibold mb-2"
@@ -101,20 +113,22 @@ export default function GSBSavingCalculator() {
                   จำนวนเงินที่ต้องการ (บาท)
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   className="w-full rounded-lg p-3 pl-4 text-base focus:outline-none focus:ring-2 focus:ring-gray-500 border-2 transition-all bg-gradient-to-r from-gray-50/50 to-gray-100/50"
                   style={{
                     borderColor: "rgba(4,8,27,0.125)",
                     color: "#04081b",
                   }}
                   value={targetAmount}
-                  onChange={(e) => setTargetAmount(e.target.value)}
-                  min={0}
-                  step={1000}
+                  onChange={(e) =>
+                    setTargetAmount(formatNumber(e.target.value))
+                  }
                   placeholder="0"
                 />
               </div>
 
+              {/* ระยะเวลาและอัตราดอกเบี้ย */}
               <div className="grid md:grid-cols-2 gap-5">
                 <div className="relative">
                   <label
@@ -124,16 +138,15 @@ export default function GSBSavingCalculator() {
                     ระยะเวลาที่ต้องการออม (ปี)
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     className="w-full rounded-lg p-3 text-base focus:outline-none focus:ring-2 focus:ring-gray-500 border-2 transition-all bg-gradient-to-r from-gray-50/50 to-gray-100/50"
                     style={{
                       borderColor: "rgba(4,8,27,0.125)",
                       color: "#04081b",
                     }}
                     value={years}
-                    onChange={(e) => setYears(e.target.value)}
-                    min={1}
-                    max={50}
+                    onChange={(e) => setYears(formatNumber(e.target.value))}
                     placeholder="0"
                   />
                 </div>
@@ -146,22 +159,23 @@ export default function GSBSavingCalculator() {
                     อัตราดอกเบี้ย (% ต่อปี)
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     className="w-full rounded-lg p-3 text-base focus:outline-none focus:ring-2 focus:ring-gray-500 border-2 transition-all bg-gradient-to-r from-gray-50/50 to-gray-100/50"
                     style={{
                       borderColor: "rgba(4,8,27,0.125)",
                       color: "#04081b",
                     }}
                     value={interestRate}
-                    onChange={(e) => setInterestRate(e.target.value)}
-                    min={0}
-                    max={20}
-                    step={0.1}
+                    onChange={(e) =>
+                      setInterestRate(formatNumber(e.target.value))
+                    }
                     placeholder="0"
                   />
                 </div>
               </div>
 
+              {/* เงินออมเริ่มต้น */}
               <div className="relative">
                 <label
                   className="block text-base font-semibold mb-2"
@@ -170,16 +184,17 @@ export default function GSBSavingCalculator() {
                   เงินออมเริ่มต้น (บาท)
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   className="w-full rounded-lg p-3 text-base focus:outline-none focus:ring-2 focus:ring-gray-500 border-2 transition-all bg-gradient-to-r from-gray-50/50 to-gray-100/50"
                   style={{
                     borderColor: "rgba(4,8,27,0.125)",
                     color: "#04081b",
                   }}
                   value={initialAmount}
-                  onChange={(e) => setInitialAmount(e.target.value)}
-                  min={0}
-                  step={1000}
+                  onChange={(e) =>
+                    setInitialAmount(formatNumber(e.target.value))
+                  }
                   placeholder="0"
                 />
               </div>
@@ -247,9 +262,7 @@ export default function GSBSavingCalculator() {
                     </p>
                     <p className="text-lg font-normal">บาท</p>
                   </div>
-                  <p className="text-sm opacity-90 mt-2 font-normal">
-                    ต่อเดือน
-                  </p>
+                  <p className="text-sm opacity-90 mt-2 font-normal">ต่อเดือน</p>
                 </div>
               </div>
 
