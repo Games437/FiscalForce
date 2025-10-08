@@ -333,7 +333,7 @@ export default function TaxPlannerWizard() {
       ded_disabled_relative: Boolean(data.ded_disabled_relative),
       children_before2018: parseNumber(String(data.children_before2018)),
       children_after2018: parseNumber(String(data.children_after2018)),
-      hasChildren: Boolean(data.hasChildren), // เพิ่ม
+      hasChildren: Boolean(data.hasChildren),
       ded_social: parseNumber(String(data.ded_social)),
       ded_insurance: parseNumber(String(data.ded_insurance)),
       ded_health: parseNumber(String(data.ded_health)),
@@ -342,14 +342,29 @@ export default function TaxPlannerWizard() {
       ded_fund: parseNumber(String(data.ded_fund)),
       ded_provident: parseNumber(String(data.ded_provident)),
       ded_homeLoan: parseNumber(String(data.ded_homeLoan)),
-      ded_donate_education: parseNumber(String(data.ded_donate_education)), // เพิ่ม
-      ded_donate_general: parseNumber(String(data.ded_donate_general)), // เพิ่ม
+      ded_donate_education: parseNumber(String(data.ded_donate_education)),
+      ded_donate_general: parseNumber(String(data.ded_donate_general)),
       taxWithheld: parseNumber(String(data.taxWithheld)),
     };
+
     const res = calculateTax(i);
+
+    // ✅ เพิ่มเงื่อนไขใหม่: ถ้ารายได้สุทธิน้อยกว่า 150,000 บาท
+    if (res.taxable <= 150000) {
+      setResult({
+        ...res,
+        tax: 0,
+        taxDue: 0,
+        breakdown: [],
+      });
+      setStep(6);
+      return;
+    }
+
     setResult(res);
     setStep(6);
   };
+
 
   /* ---------- Draw Chart ---------- */
 useEffect(() => {
@@ -366,9 +381,7 @@ useEffect(() => {
     // เตรียมข้อมูล
     const labels = result.breakdown.map((b, i) => `ขั้นที่ ${i + 1}`);
     const data = result.breakdown.map((b) => b.tax);
-    const totalTax = result.tax;
-    const totalIncome = result.totalIncome;
-    const taxRate = ((totalTax / totalIncome) * 100).toFixed(2);
+
 
     chartInstance.current = new Chart(ctx, {
       type: "bar",
@@ -861,62 +874,67 @@ useEffect(() => {
         )}
 
         {/* Step 6 — Result */}
-        {step === 6 && result && (  // ผลลัพธ์
+        {step === 6 && result && (
           <div className="space-y-6">
-            <div className="p-6 bg-gray-50 border-2 border-black rounded-xl shadow">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">
-                ภาษีที่คุณต้องจ่ายประมาณ
-              </h3>
-              <p className="text-5xl font-bold text-gray-900">
-                {fmtNumber(Math.abs(result.taxDue))} บาท
-              </p>
-              <p className="text-lg text-red-600">
-                คิดเป็น {((result.tax / result.totalIncome) * 100).toFixed(2)}%
-                ของรายได้ทั้งหมด
-              </p>
-            </div>
-<div className="mt-10 text-center">
-            <p className="text-gray-600 text-lg">อัตราภาษีของคุณอยู่ที่</p>
-              <p className="text-5xl font-bold text-gray-800 mt-1">
-                {(result.breakdown[result.breakdown.length - 1].rate * 100).toFixed(0)}%
-              </p>
-</div>
-            <div className="border rounded-lg overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-200">
-                  <tr>
-                    <th className="p-2 text-left">ช่วงเงินได้</th>
-                    <th className="p-2 text-center">อัตราภาษี</th>
-                    <th className="p-2 text-right">เงินได้ที่เสียภาษี</th>
-                    <th className="p-2 text-right">ภาษีแต่ละขั้น</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.breakdown.map((b, i) => (
-                    <tr key={i} className="border-t hover:bg-gray-100">
-                      <td className="p-2">{b.range}</td>
-                      <td className="p-2 text-center">
-                        {(b.rate * 100).toFixed(0)}%
-                      </td>
-                      <td className="p-2 text-right">{fmtNumber(b.amount)}</td>
-                      <td className="p-2 text-right text-red-600">
-                        {fmtNumber(b.tax)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Chart Section */}
-            <div className="mt-10 text-center">
-              <div className="mt-6 h-[300px]">
-                <canvas ref={chartRef}></canvas>
+            {result.tax <= 0 ? (
+              <div className="p-6 bg-blue-50 border-l-8 border-blue-600 rounded-xl shadow">
+                <h3 className="text-2xl font-bold text-black mb-2">🎉 คุณไม่ต้องเสียภาษีในปีนี้</h3>
+                <p className="text-gray-700 text-lg">
+                  เนื่องจากรายได้สุทธิน้อยกว่า 150,000 บาท ตามเกณฑ์ยกเว้นภาษี
+                </p>
               </div>
-            </div>
+            ) : (
+              <>
+                <div className="p-6 bg-gray-50 border-2 border-black rounded-xl shadow">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">
+                    ภาษีที่คุณต้องจ่ายประมาณ
+                  </h3>
+                  <p className="text-5xl font-bold text-gray-900">
+                    {fmtNumber(Math.abs(result.taxDue))} บาท
+                  </p>
+                  <p className="text-lg text-red-600">
+                    คิดเป็น {((result.tax / result.totalIncome) * 100).toFixed(2)}%
+                    ของรายได้ทั้งหมด
+                  </p>
+                </div>
 
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-200">
+                      <tr>
+                        <th className="p-2 text-left">ช่วงเงินได้</th>
+                        <th className="p-2 text-center">อัตราภาษี</th>
+                        <th className="p-2 text-right">เงินได้ที่เสียภาษี</th>
+                        <th className="p-2 text-right">ภาษีแต่ละขั้น</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.breakdown.map((b, i) => (
+                        <tr key={i} className="border-t hover:bg-gray-100">
+                          <td className="p-2">{b.range}</td>
+                          <td className="p-2 text-center">
+                            {(b.rate * 100).toFixed(0)}%
+                          </td>
+                          <td className="p-2 text-right">{fmtNumber(b.amount)}</td>
+                          <td className="p-2 text-right text-red-600">
+                            {fmtNumber(b.tax)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-10 text-center">
+                  <div className="mt-6 h-[300px]">
+                    <canvas ref={chartRef}></canvas>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-        )}
+)}
+
       </div>
 
 
