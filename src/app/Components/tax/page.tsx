@@ -2,102 +2,119 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Chart, registerables } from "chart.js";
 
+// Register Chart.js components
 Chart.register(...registerables);
 
 /* ---------- Helpers ---------- */
 const fmtNumber = (n: number) => Number(n || 0).toLocaleString("en-US");
-const parseNumber = (s: string) => {
-  if (!s && s !== "0") return 0;
-  const cleaned = String(s).replace(/[,\s]+/g, "");
-  const v = Number(cleaned);
-  return Number.isFinite(v) ? v : 0;
+
+const parseNumber = (s: string) => { 
+  if (!s && s !== "0") return 0;      // ค่าว่างให้คืน 0
+  const cleaned = String(s).replace(/[,\s]+/g, ""); // ลบ , และช่องว่าง
+  const v = Number(cleaned);          // แปลงเป็นตัวเลข
+  return Number.isFinite(v) ? v : 0;  // ตรวจสอบเลข
 };
 
 /* ---------- Types ---------- */
 interface TaxBreakdown {
-  range: string;
-  amount: number;
-  rate: number;
-  tax: number;
+  range: string;    // ช่วงรายได้
+  amount: number;   // จำนวนเงินในขั้นนี้ที่ต้องเสียภาษี
+  rate: number;     // อัตราภาษี
+  tax: number;      // ภาษีที่ต้องจ่ายในขั้นนี้
 }
 
 interface TaxResult {
-  totalIncome: number;
-  deduction: number;
-  taxable: number;
-  tax: number;
-  withheld: number;
-  taxDue: number;
-  breakdown: TaxBreakdown[];
+  totalIncome: number;      // รายได้รวม
+  deduction: number;        // ค่าลดหย่อน
+  taxable: number;          // เงินได้สุทธิ (totalIncome - deduction)
+  tax: number;              // ภาษีที่ต้องจ่าย
+  withheld: number;         // ภาษีที่ถูกหัก 
+  taxDue: number;           // ภาษีที่ต้องจ่ายเพิ่ม (tax - withheld)
+  breakdown: TaxBreakdown[];    // รายละเอียดการคำนวณภาษีในแต่ละขั้น
 }
 
 /* ---------- Tax Calculation ---------- */
+//ฟังก์ชันคำนวณภาษีเงินได้บุคคลธรรมดา
 function calculateTax(inputs: {
-  salaryMonthly: number;
-  bonus: number;
-  business: number;
-  interest: number;
-  dividend: number;
-  rent: number;
-  otherIncome: number;
-  ded_spouse: boolean;
-  ded_father: boolean;
-  ded_mother: boolean;
-  ded_disabled_father: boolean;
-  ded_disabled_mother: boolean;
-  ded_disabled_spouse: boolean;
-  ded_disabled_father_spouse: boolean;
-  ded_disabled_mother_spouse: boolean;
-  ded_disabled_child: boolean;
-  ded_disabled_relative: boolean;
-  children_before2018: number;
-  children_after2018: number;
-  ded_social: number;
-  ded_insurance: number;
-  ded_health: number;
-  ded_health_parents: number;
-  ded_pension_insurance: number;
-  ded_fund: number;
-  ded_provident: number;
-  ded_homeLoan: number;
-  ded_donate_education: number; // เพิ่ม
-  ded_donate_general: number; // เพิ่ม
-  taxWithheld: number;
-  hasChildren: boolean;
+  // รายได้
+  salaryMonthly: number;              // เงินเดือนต่อเดือน
+  bonus: number;                      // โบนัส
+  business: number;                   // รายได้จากธุรกิจ
+  interest: number;                   // ดอกเบี้ย
+  dividend: number;                   // เงินปันผล
+  rent: number;                       // ค่าเช่า
+  otherIncome: number;                // รายได้อื่นๆ
+
+  // ค่าลดหย่อนครอบครัว
+  ded_spouse: boolean;                // คู่สมรสไม่มีรายได้
+  ded_father: boolean;                // ลดหย่อนบิดา
+  ded_mother: boolean;                // ลดหย่อนมารดา
+
+  // ค่าลดหย่อนผู้พิการ
+  ded_disabled_father: boolean;       // บิดาพิการ
+  ded_disabled_mother: boolean;       // มารดาพิการ
+  ded_disabled_spouse: boolean;       // คู่สมรสพิการ
+  ded_disabled_father_spouse: boolean;    // บิดาคู่สมรสพิการ
+  ded_disabled_mother_spouse: boolean;    // มารดาคู่สมรสพิการ
+  ded_disabled_child: boolean;            // บุตรพิการ
+  ded_disabled_relative: boolean;         // ญาติพิการ
+
+  // บุตร
+  hasChildren: boolean;               // มีบุตรหรือไม่
+  children_before2018: number;        // จำนวนบุตรเกิดก่อน 2561
+  children_after2018: number;         // จำนวนบุตรเกิดตั้งแต่ 2561
+
+
+  // ค่าลดหย่อนประกันและกองทุน
+  ded_social: number;                 // ประกันสังคม
+  ded_insurance: number;              // ประกันชีวิต
+  ded_health: number;                 // ประกันสุขภาพ
+  ded_health_parents: number;         // ประกันสุขภาพบิดามารดา
+  ded_pension_insurance: number;      // ประกันชีวิตบำนาญ
+  ded_fund: number;                   // RMF/SSF
+  ded_provident: number;              // กองทุนสำรองเลี้ยงชีพ
+  ded_homeLoan: number;               // ดอกเบี้ยบ้าน
+
+  // เงินบริจาค
+  ded_donate_education: number;       // บริจาคการศึกษา/กีฬา/สังคม
+  ded_donate_general: number;         // บริจาคทั่วไป
+
+  taxWithheld: number;                // ภาษีที่ถูกหัก ณ ที่จ่าย
 }): TaxResult {
-  const salary = inputs.salaryMonthly * 12;
-  const salaryExpense = Math.min(salary * 0.5, 100000);
-  const businessExpense = Math.min(inputs.business * 0.6, 100000);
 
+  // ========== คำนวณรายได้รวม ==========
+  const salary = inputs.salaryMonthly * 12;             // เงินเดือนต่อปี
+  const salaryExpense = Math.min(salary * 0.5, 100000);               // ค่าใช้จ่ายจากเงินเดือน (50% สูงสุด 100,000 บาท)
+  const businessExpense = Math.min(inputs.business * 0.6, 100000);    // ค่าใช้จ่ายจากธุรกิจ (60% สูงสุด 100,000 บาท)
+
+  // รายได้รวมทั้งหมด = รายได้ - ค่าใช้จ่าย
   const totalIncome =
-    salary -
-    salaryExpense +
-    inputs.bonus +
-    (inputs.business - businessExpense) +
-    inputs.interest +
-    inputs.dividend +
-    inputs.rent +
-    inputs.otherIncome;
+    salary - salaryExpense +              // เงินเดือนหลังหักค่าใช้จ่าย
+    inputs.bonus +                        // โบนัส
+    (inputs.business - businessExpense) + // รายได้ธุรกิจหลังหักค่าใช้จ่าย
+    inputs.interest +                     // ดอกเบี้ย
+    inputs.dividend +                     // เงินปันผล
+    inputs.rent +                         // ค่าเช่า
+    inputs.otherIncome;                   // รายได้อื่นๆ
 
-  // คำนวณค่าลดหย่อน
-  let deduction = 60000;
+  // ========== คำนวณค่าลดหย่อน ==========
+  let deduction = 60000; // ค่าลดหย่อนส่วนตัว
 
-  if (inputs.ded_spouse) deduction += 60000;
-  if (inputs.ded_father) deduction += 30000;
-  if (inputs.ded_mother) deduction += 30000;
+  if (inputs.ded_spouse) deduction += 60000;  // ลดหย่อนคู่สมรสไม่มีรายได้
+  if (inputs.ded_father) deduction += 30000;  // ลดหย่อนบิดา
+  if (inputs.ded_mother) deduction += 30000;  // ลดหย่อนมารดา
 
-   // คำนวณค่าลดหย่อนบุตร
+   // ========== ค่าลดหย่อนบุตร ==========
   if (inputs.hasChildren) {
     // บุตรคนแรกลดหย่อน 30,000 อัตโนมัติ
     deduction += 30000;
-    
-    // บุตรเพิ่มเติมที่เกิดก่อน 2561 (ถ้ามี)
+    // บุตรเพิ่มเติมที่เกิดก่อน 2561
     deduction += inputs.children_before2018 * 30000;
-    
-    // บุตรเพิ่มเติมที่เกิดตั้งแต่ 2561 (ถ้ามี)
+    // บุตรเพิ่มเติมที่เกิดตั้งแต่ 2561
     deduction += inputs.children_after2018 * 60000;
   }
 
+  // ========== ค่าลดหย่อนผู้พิการ (คนละ 60,000) ==========
   let disabledCount = 0;
   if (inputs.ded_disabled_father) disabledCount++;
   if (inputs.ded_disabled_mother) disabledCount++;
@@ -108,18 +125,20 @@ function calculateTax(inputs: {
   if (inputs.ded_disabled_relative) disabledCount++;
   deduction += disabledCount * 60000;
 
-  // ประกันสังคม
+  // ========== ประกันสังคม ==========
   deduction += Math.min(inputs.ded_social, 9000);
 
-  // ประกันชีวิตและสุขภาพ
-  const insuranceLife = Math.min(inputs.ded_insurance, 100000);
-  const insuranceHealth = Math.min(inputs.ded_health, 25000);
-  const insuranceHealthParents = Math.min(inputs.ded_health_parents, 15000);
+  // ========== ประกันชีวิตและสุขภาพ ==========
+  const insuranceLife = Math.min(inputs.ded_insurance, 100000);              // ประกันชีวิตสูงสุด
+  const insuranceHealth = Math.min(inputs.ded_health, 25000);                // ประกันสุขภาพสูงสุด
+  const insuranceHealthParents = Math.min(inputs.ded_health_parents, 15000); // ประกันสุขภาพบิดามารดา
 
+  // ========== ประกันชีวิตบำนาญ ==========
   const maxPension15Percent = totalIncome * 0.15;
   const maxPensionBase = Math.min(inputs.ded_pension_insurance, 200000);
   let pensionInsurance = Math.min(maxPensionBase, maxPension15Percent);
 
+  // ถ้าไม่ได้ใช้สิทธิประกันชีวิตทั่วไป สามารถลดหย่อนได้สูงสุด 300,000
   if (insuranceLife === 0) {
     pensionInsurance = Math.min(
       inputs.ded_pension_insurance,
@@ -128,39 +147,41 @@ function calculateTax(inputs: {
     );
   }
 
+  // บวกประกันเข้าค่าลดหย่อน
   deduction += insuranceLife;
   deduction += insuranceHealth;
   deduction += insuranceHealthParents;
 
-  // กองทุนต่างๆ รวมกันไม่เกิน 500,000
+  // ========== กองทุนต่างๆ รวมกันไม่เกิน 500,000 ==========
   const fundProvident = Math.min(inputs.ded_provident, 500000);
   const fundRMF_SSF = Math.min(inputs.ded_fund, 200000);
   const totalFunds = Math.min(
     fundProvident + fundRMF_SSF + pensionInsurance,
-    500000
+    500000 // รวมกองทุนทั้งหมด + ประกันบำนาญ ไม่เกิน 500,000
   );
   deduction += totalFunds;
 
+  // ========== ดอกเบี้ยบ้าน (ไม่เกิน 100,000) ==========
   deduction += Math.min(inputs.ded_homeLoan, 100000);
 
-  // คำนวณเงินได้สุทธิก่อนหักเงินบริจาค
+  // ========== คำนวณเงินได้สุทธิก่อนหักเงินบริจาค ==========
   const netIncomeBeforeDonate = Math.max(totalIncome - deduction, 0);
   const max10Percent = netIncomeBeforeDonate * 0.1;
 
-  // === เงินบริจาค ===
+  // ========== เงินบริจาค ==========
   // บริจาคการศึกษา กีฬา สังคม โรงพยาบาล (ลดหย่อน 2 เท่า ไม่เกิน 10% ของเงินได้สุทธิ)
   const donateEducation2x = inputs.ded_donate_education * 2;
   const donateEducationFinal = Math.min(donateEducation2x, max10Percent);
 
   // บริจาคทั่วไป (ตามจ่ายจริง ไม่เกิน 10% ของเงินได้สุทธิ)
   const donateGeneralFinal = Math.min(inputs.ded_donate_general, max10Percent);
+  deduction += donateEducationFinal;  
+  deduction += donateGeneralFinal;  
 
-  deduction += donateEducationFinal;
-  deduction += donateGeneralFinal;
-
+  // ========== สรุปการคำนวณภาษี ==========
   const taxable = Math.max(totalIncome - deduction, 0);
 
-  // คำนวณภาษี
+  // ========== คำนวณภาษีตามขั้นบันได ==========
   const TAX_BRACKETS = [
     { limit: 150000, rate: 0 },
     { limit: 300000, rate: 0.05 },
@@ -172,40 +193,47 @@ function calculateTax(inputs: {
     { limit: Infinity, rate: 0.35 },
   ];
 
-  let remaining = taxable;
-  let prev = 0;
-  let tax = 0;
-  const breakdown: TaxBreakdown[] = [];
+  let remaining = taxable;  // เงินที่เหลือต้องคำนวณ
+  let prev = 0;             // ขอบเขตล่างของขั้นก่อนหน้า
+  let tax = 0;              // ภาษีรวม
+  const breakdown: TaxBreakdown[] = []; // เก็บรายละเอียด
 
-  TAX_BRACKETS.forEach((b) => {
+  // วนลูปคำนวณภาษีแต่ละขั้น
+  TAX_BRACKETS.forEach((b) => { // จำนวนเงินในขั้นนี้ = min(เงินที่เหลือ, ขอบเขตบน - ขอบเขตล่าง)
     const amt = Math.max(0, Math.min(remaining, b.limit - prev));
-    if (amt > 0) {
+    
+    if (amt > 0) { // คำนวณภาษีในขั้นนี้
       const t = amt * b.rate;
-      tax += t;
+      tax += t; 
+
+      // เก็บรายละเอียด
       breakdown.push({
         range: `${fmtNumber(prev + 1)} - ${
           isFinite(b.limit) ? fmtNumber(b.limit) : "ไม่จำกัด"
         }`,
-        amount: amt,
-        rate: b.rate,
-        tax: t,
-      });
+        amount: amt,      // จำนวนเงินในขั้นนี้
+        rate: b.rate,     // อัตราภาษี
+        tax: t,           // ภาษีที่ต้องจ่ายในขั้นนี้
+      });             
     }
-    remaining -= amt;
-    prev = b.limit;
+    remaining -= amt;     // ลดจำนวนเงินที่เหลือต้องคำนวณ
+    prev = b.limit;       // อัพเดตขอบเขตล่าง
   });
 
-  const withheld = inputs.taxWithheld || 0;
-  const taxDue = tax - withheld;
+  // ========== คำนวณภาษีที่ต้องจ่ายเพิ่ม ==========
+  const withheld = inputs.taxWithheld || 0;  // ภาษีที่หักไว้แล้ว
+  const taxDue = tax - withheld;             // ภาษีที่ต้องจ่ายเพิ่ม (หรือคืน)
 
+  // คืนค่าผลลัพธ์ 
   return { totalIncome, deduction, taxable, tax, withheld, taxDue, breakdown };
-}
+} 
 
 /* ---------- Main Component ---------- */
 export default function TaxPlannerWizard() {
-  const totalSteps = 6;
+  const totalSteps = 6;         
   const [step, setStep] = useState(1);
   const [data, setData] = useState<Record<string, string | boolean>>({
+    // ========== รายได้ ==========
     salaryMonthly: "",
     bonus: "",
     business: "",
@@ -213,32 +241,38 @@ export default function TaxPlannerWizard() {
     dividend: "",
     rent: "",
     otherIncome: "",
-    ded_spouse: false,
-    ded_social: "",
-    ded_insurance: "",
-    ded_health: "",
-    ded_fund: "",
-    ded_provident: "",
-    ded_homeLoan: "",
-    ded_donate: "",
-    taxWithheld: "",
+    // ========== สถานะครอบครัว ==========
     maritalStatus: "โสด",
+    ded_spouse: false,
     ded_father: false, 
-    ded_mother: false, 
+    ded_mother: false,
+    // ========== ประกันและกองทุน ==========
+    ded_social: "",             
+    ded_insurance: "",           
+    ded_health: "",              
+    ded_health_parents: "",      
+    ded_pension_insurance: "",   
+    ded_fund: "",                
+    ded_provident: "",           
+    ded_homeLoan: "",            
+    // ========== ผู้พิการ ==========
     ded_disabled_father: false, 
-    ded_disabled_mother: false, // เพิ่ม
-    ded_disabled_spouse: false, // เพิ่ม
-    ded_disabled_father_spouse: false, // เพิ่ม
-    ded_disabled_mother_spouse: false, // เพิ่ม
-    ded_disabled_child: false, // เพิ่ม
-    ded_disabled_relative: false, // เพิ่ม
-    hasChildren: false, // เพิ่ม
-    children_before2018: "", // เพิ่ม: จำนวนบุตรเกิดก่อน 2561
-    children_after2018: "", // เพิ่ม: จำนวนบุตรเกิดตั้งแต่ 2561
-    ded_health_parents: "", 
-    ded_pension_insurance: "", 
+    ded_disabled_mother: false, 
+    ded_disabled_spouse: false, 
+    ded_disabled_father_spouse: false, 
+    ded_disabled_mother_spouse: false, 
+    ded_disabled_child: false, 
+    ded_disabled_relative: false, 
+    // ========== บุตร ==========
+    hasChildren: false,
+    children_before2018: "", 
+    children_after2018: "",
+    // ========== เงินบริจาค ==========
     ded_donate_education: "",
     ded_donate_general: "", 
+    ded_donate: "",
+    // ========== ภาษีหัก ณ ที่จ่าย ==========
+    taxWithheld: "", 
   });
   const [result, setResult] = useState<TaxResult | null>(null);
   const chartRef = useRef<HTMLCanvasElement>(null);
@@ -252,23 +286,21 @@ export default function TaxPlannerWizard() {
       const salary = parseNumber(String(data.salaryMonthly));
       const bonus = parseNumber(String(data.bonus));
       const otherIncome = parseNumber(String(data.otherIncome));
-
       // ตรวจสอบเงื่อนไข
       if (salary <= 0 && otherIncome <= 0 && bonus > 0) {
         alert("กรุณาระบุรายได้");
         return;
       }
-
       if (salary <= 0 && otherIncome <= 0 && bonus <= 0) {
         alert("กรุณาระบุรายได้");
         return;
       }
     }
-
     setStep((s) => Math.min(totalSteps, s + 1));
   };
 
   const prev = () => setStep((s) => Math.max(1, s - 1));
+  // รีเซ็ตข้อมูลทั้งหมด
   const restart = () => {
     setData({
       salaryMonthly: "",
@@ -300,8 +332,8 @@ export default function TaxPlannerWizard() {
       ded_fund: "",
       ded_provident: "",
       ded_homeLoan: "",
-      ded_donate_education: "", // เพิ่ม
-      ded_donate_general: "", // เพิ่ม
+      ded_donate_education: "",
+      ded_donate_general: "", 
       taxWithheld: "",
     });
     setResult(null);
@@ -312,8 +344,8 @@ export default function TaxPlannerWizard() {
     }
   };
 
-  const runCalculate = () => {
-    const i = {
+  const runCalculate = () => {     // เรียกฟังก์ชันคำนวณภาษี
+    const i = {                    // เตรียมข้อมูล
       salaryMonthly: parseNumber(String(data.salaryMonthly)),
       bonus: parseNumber(String(data.bonus)),
       business: parseNumber(String(data.business)),
@@ -349,7 +381,7 @@ export default function TaxPlannerWizard() {
 
     const res = calculateTax(i);
 
-    // ✅ เพิ่มเงื่อนไขใหม่: ถ้ารายได้สุทธิน้อยกว่า 150,000 บาท
+    // ถ้ารายได้สุทธิน้อยกว่า 150,000 บาท
     if (res.taxable <= 150000) {
       setResult({
         ...res,
@@ -360,7 +392,6 @@ export default function TaxPlannerWizard() {
       setStep(6);
       return;
     }
-
     setResult(res);
     setStep(6);
   };
@@ -369,20 +400,16 @@ export default function TaxPlannerWizard() {
   /* ---------- Draw Chart ---------- */
 useEffect(() => {
     if (!chartRef.current || !result) return;
-
     const ctx = chartRef.current.getContext("2d");
     if (!ctx) return;
-
     // ถ้ามีกราฟอยู่แล้วให้ลบก่อน
     if (chartInstance.current) {
       chartInstance.current.destroy();
     }
-
     // เตรียมข้อมูล
     const labels = result.breakdown.map((b, i) => `ขั้นที่ ${i + 1}`);
     const data = result.breakdown.map((b) => b.tax);
-
-
+    // สร้างกราฟใหม่
     chartInstance.current = new Chart(ctx, {
       type: "bar",
       data: {
@@ -449,7 +476,7 @@ useEffect(() => {
 
   return (
     <div className="max-w-4xl mx-auto mt-10 bg-white rounded-2xl shadow-2xl p-8 font-sans">
-      {/* Progress Bar */}
+      {/* Progress Bar */} 
       <div className="mb-10">
         <div className="flex justify-between">
           {["รายรับ", "ครอบครัว", "กองทุน", "ประกัน", "อื่นๆ", "ผลลัพธ์"].map(
@@ -520,8 +547,8 @@ useEffect(() => {
                       {["โสด", "หย่า", "สมรส"].map((status) => (
                         <label key={status} className="flex items-center gap-2">
                           <input
-                            type="radio"
-                            name="maritalStatus"
+                            type="radio"  
+                            name="maritalStatus" 
                             value={status}
                             checked={data.maritalStatus === status}
                             onChange={(e) =>
@@ -877,8 +904,8 @@ useEffect(() => {
         {step === 6 && result && (
           <div className="space-y-6">
             {result.tax <= 0 ? (
-              <div className="p-6 bg-blue-50 border-l-8 border-blue-600 rounded-xl shadow">
-                <h3 className="text-2xl font-bold text-black mb-2">🎉 คุณไม่ต้องเสียภาษีในปีนี้</h3>
+              <div className="p-6 bg-green-50 border-l-8 border-green-600 rounded-xl shadow">
+                <h3 className="text-2xl font-bold text-green-700 mb-2">🎉 คุณไม่ต้องเสียภาษีในปีนี้</h3>
                 <p className="text-gray-700 text-lg">
                   เนื่องจากรายได้สุทธิน้อยกว่า 150,000 บาท ตามเกณฑ์ยกเว้นภาษี
                 </p>
@@ -934,9 +961,7 @@ useEffect(() => {
             )}
           </div>
 )}
-
       </div>
-
 
       {/* Navigation */}
       <div className="mt-8 flex justify-between">
@@ -993,7 +1018,7 @@ function NumInput({
   full?: boolean;
   info?: string;
 }) {
-  // 🧮 ฟังก์ชัน format ตัวเลขให้มีลูกน้ำ
+  // ฟังก์ชัน format ตัวเลขให้มีลูกน้ำ
   const formatNumber = (num: string) => {
     if (num === "") return "";
     const cleaned = num.replace(/,/g, "");
@@ -1003,9 +1028,8 @@ function NumInput({
     return parts.join(".");
   };
 
-  // 🧹 ลบลูกน้ำก่อนเก็บลง state
+  // ลบลูกน้ำก่อนเก็บลง state
   const unformatNumber = (num: string) => num.replace(/,/g, "");
-
   const handle = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
     if (/^[0-9,]*\.?[0-9]*$/.test(v) || v === "") {
@@ -1017,13 +1041,13 @@ function NumInput({
     <div className={full ? "md:col-span-2" : ""}>
       <label className="text-sm font-medium flex items-center gap-2">
         {label}
-        {/* ✅ Tooltip icon */}
+        {/* Tooltip icon */}
         {info && (
           <div className="relative group cursor-pointer">
             <div className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-200 text-gray-900 text-xs font-bold">
               i
             </div>
-            {/* ✅ Tooltip ด้านข้างขวา */}
+            {/* Tooltip ด้านข้างขวา */}
             <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-56 bg-gray-800 text-white text-xs rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
               {info}
             </div>
@@ -1032,7 +1056,7 @@ function NumInput({
       </label>
       <input
         inputMode="numeric"
-        value={formatNumber(value)} // ✅ แสดงค่าที่ใส่ลูกน้ำแล้ว
+        value={formatNumber(value)}
         onChange={handle}
         placeholder="0"
         className="w-full border border-black rounded-lg p-2 mt-1 focus:ring-2 focus:ring-black bg-gray-50 text-black"
