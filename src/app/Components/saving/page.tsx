@@ -1,59 +1,76 @@
-"use client";
+"use client"; // ใช้ใน Next.js เพื่อบอกว่าคอมโพเนนต์นี้ทำงานฝั่ง Client
 import { useState } from "react";
 
+/* ---------- กำหนดชนิดข้อมูลของผลลัพธ์ ---------- */
 interface Result {
-  monthlyPayment: number;
-  totalDeposit: number;
-  totalInterest: number;
-  targetAmount: number;
+  monthlyPayment: number; // จำนวนเงินที่ต้องออมต่อเดือน
+  totalDeposit: number;   // เงินต้นรวมทั้งหมดที่ออม
+  totalInterest: number;  // ดอกเบี้ยที่ได้รับ
+  targetAmount: number;   // จำนวนเงินเป้าหมายสุดท้าย
 }
 
+/* ---------- คอมโพเนนต์หลัก ---------- */
 export default function GSBSavingCalculator() {
-  const [targetAmount, setTargetAmount] = useState<string>("");
-  const [years, setYears] = useState<string>("");
-  const [interestRate, setInterestRate] = useState<string>("");
-  const [initialAmount, setInitialAmount] = useState<string>("");
-  const [result, setResult] = useState<Result | null>(null);
+  /* ---------- สร้าง state เก็บค่าข้อมูลจาก input ---------- */
+  const [targetAmount, setTargetAmount] = useState<string>(""); // เป้าหมายเงินที่อยากได้
+  const [years, setYears] = useState<string>("");               // ระยะเวลา (ปี)
+  const [interestRate, setInterestRate] = useState<string>(""); // อัตราดอกเบี้ยต่อปี
+  const [initialAmount, setInitialAmount] = useState<string>(""); // เงินเริ่มต้นที่มีอยู่แล้ว
+  const [result, setResult] = useState<Result | null>(null);     // ผลลัพธ์การคำนวณ
 
-  /* ---------- Helper Functions ---------- */
+  /* ---------- ฟังก์ชันจัดรูปแบบตัวเลข เช่น ใส่เครื่องหมาย , ---------- */
   const formatNumber = (value: string) => {
-    const num = value.replace(/,/g, "");
+    const num = value.replace(/,/g, ""); // ลบ , ออกก่อน
     if (num === "" || isNaN(Number(num))) return "";
-    return Number(num).toLocaleString("en-US");
+    return Number(num).toLocaleString("en-US"); // ใส่ , ทุกหลักพัน
   };
 
+  /* ---------- ฟังก์ชันแปลงข้อความเป็นตัวเลข ---------- */
   const parseNumber = (value: string) => Number(value.replace(/,/g, "")) || 0;
 
-  /* ---------- Handle Calculate ---------- */
+  /* ---------- ฟังก์ชันคำนวณเงินออม ---------- */
   const handleCalculate = () => {
+    // แปลงค่าจาก input เป็นตัวเลข
     const targetVal = parseNumber(targetAmount);
     const yearsVal = parseNumber(years);
     const rateVal = parseNumber(interestRate);
     const initialVal = parseNumber(initialAmount);
 
-    const months = yearsVal * 12;
-    const monthlyRate = rateVal / 100 / 12;
+    const months = yearsVal * 12; // แปลงปีเป็นเดือน
+    const monthlyRate = rateVal / 100 / 12; // ดอกเบี้ยต่อเดือน
 
+    // ตรวจสอบหากกรอกปี <= 0 จะไม่คำนวณ
     if (months <= 0) {
       setResult(null);
       return;
     }
 
+    // มูลค่าอนาคตของเงินเริ่มต้น (ทบต้น)
     const futureValueOfInitial = initialVal * Math.pow(1 + monthlyRate, months);
+
+    // คำนวณยอดเงินที่ยังต้องออมเพิ่มให้ถึงเป้าหมาย
     const remainingAmount = targetVal - futureValueOfInitial;
 
     let monthlyPayment = 0;
+
+    // ถ้ามีดอกเบี้ย
     if (monthlyRate > 0) {
+      // สูตรคำนวณเงินฝากรายเดือนแบบอนุกรม (Future Value of Annuity)
       monthlyPayment =
         remainingAmount /
         ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate);
     } else {
+      // ถ้าไม่มีดอกเบี้ยเลย
       monthlyPayment = remainingAmount / months;
     }
 
+    // เงินต้นรวมทั้งหมดที่ฝากในระยะเวลาทั้งหมด
     const totalDeposit = initialVal + monthlyPayment * months;
+
+    // ดอกเบี้ยที่ได้รับ = เป้าหมาย - เงินที่ฝากจริง
     const totalInterest = targetVal - totalDeposit;
 
+    // เก็บผลลัพธ์ใน state
     setResult({
       monthlyPayment,
       totalDeposit,
@@ -62,7 +79,7 @@ export default function GSBSavingCalculator() {
     });
   };
 
-  /* ---------- Handle Clear ---------- */
+  /* ---------- ฟังก์ชันล้างข้อมูลทั้งหมด ---------- */
   const handleClear = () => {
     setTargetAmount("");
     setYears("");
@@ -71,10 +88,11 @@ export default function GSBSavingCalculator() {
     setResult(null);
   };
 
+  /* ---------- ส่วนการแสดงผล UI ---------- */
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
+        {/* ---------- ส่วนหัว ---------- */}
         <div className="text-center mb-10">
           <div
             className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-4 shadow-lg"
@@ -87,263 +105,144 @@ export default function GSBSavingCalculator() {
           <h1 className="text-4xl font-bold mb-3 bg-gradient-to-r from-gray-700 to-gray-900 bg-clip-text text-transparent">
             คำนวณเงินออม
           </h1>
-          <p className="text-gray-600 font-normal text-lg flex items-center justify-center gap-2">
-            Government Savings
-          </p>
+          <p className="text-gray-600 font-normal text-lg">Government Savings</p>
         </div>
 
-        {/* Main Card */}
+        {/* ---------- กล่องหลักของแบบฟอร์ม ---------- */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border-2 border-white">
-          {/* Input Section */}
+
+          {/* ---------- ส่วนกรอกข้อมูล ---------- */}
           <div className="mb-10">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-1 h-6 rounded-full bg-gradient-to-b from-gray-700 to-gray-900"></div>
-              <h2 className="text-2xl font-bold" style={{ color: "#04081b" }}>
-                ข้อมูลการออม
-              </h2>
-            </div>
+            <h2 className="text-2xl font-bold mb-6 text-gray-800">
+              ข้อมูลการออม
+            </h2>
 
             <div className="grid gap-5">
-              {/* จำนวนเงินที่ต้องการ */}
-              <div className="relative">
-                <label
-                  className="block text-base font-semibold mb-2"
-                  style={{ color: "#04081b" }}
-                >
+              {/* กรอกจำนวนเงินที่ต้องการ */}
+              <div>
+                <label className="block font-semibold mb-2">
                   จำนวนเงินที่ต้องการ (บาท)
                 </label>
                 <input
                   type="text"
-                  inputMode="numeric"
-                  className="w-full rounded-lg p-3 pl-4 text-base focus:outline-none focus:ring-2 focus:ring-gray-500 border-2 transition-all bg-gradient-to-r from-gray-50/50 to-gray-100/50"
-                  style={{
-                    borderColor: "rgba(4,8,27,0.125)",
-                    color: "#04081b",
-                  }}
                   value={targetAmount}
-                  onChange={(e) =>
-                    setTargetAmount(formatNumber(e.target.value))
-                  }
+                  onChange={(e) => setTargetAmount(formatNumber(e.target.value))}
+                  className="w-full rounded-lg p-3 border-2"
                   placeholder="0"
                 />
               </div>
 
-              {/* ระยะเวลาและอัตราดอกเบี้ย */}
+              {/* กรอกระยะเวลาและอัตราดอกเบี้ย */}
               <div className="grid md:grid-cols-2 gap-5">
-                <div className="relative">
-                  <label
-                    className="block text-base font-semibold mb-2"
-                    style={{ color: "#04081b" }}
-                  >
+                <div>
+                  <label className="block font-semibold mb-2">
                     ระยะเวลาที่ต้องการออม (ปี)
                   </label>
                   <input
                     type="text"
-                    inputMode="numeric"
-                    className="w-full rounded-lg p-3 text-base focus:outline-none focus:ring-2 focus:ring-gray-500 border-2 transition-all bg-gradient-to-r from-gray-50/50 to-gray-100/50"
-                    style={{
-                      borderColor: "rgba(4,8,27,0.125)",
-                      color: "#04081b",
-                    }}
                     value={years}
                     onChange={(e) => setYears(formatNumber(e.target.value))}
+                    className="w-full rounded-lg p-3 border-2"
                     placeholder="0"
                   />
                 </div>
 
-                <div className="relative">
-                  <label
-                    className="block text-base font-semibold mb-2"
-                    style={{ color: "#04081b" }}
-                  >
+                <div>
+                  <label className="block font-semibold mb-2">
                     อัตราดอกเบี้ย (% ต่อปี)
                   </label>
                   <input
                     type="text"
-                    inputMode="decimal"
-                    className="w-full rounded-lg p-3 text-base focus:outline-none focus:ring-2 focus:ring-gray-500 border-2 transition-all bg-gradient-to-r from-gray-50/50 to-gray-100/50"
-                    style={{
-                      borderColor: "rgba(4,8,27,0.125)",
-                      color: "#04081b",
-                    }}
                     value={interestRate}
                     onChange={(e) =>
                       setInterestRate(formatNumber(e.target.value))
                     }
+                    className="w-full rounded-lg p-3 border-2"
                     placeholder="0"
                   />
                 </div>
               </div>
 
-              {/* เงินออมเริ่มต้น */}
-              <div className="relative">
-                <label
-                  className="block text-base font-semibold mb-2"
-                  style={{ color: "#04081b" }}
-                >
+              {/* กรอกเงินเริ่มต้น */}
+              <div>
+                <label className="block font-semibold mb-2">
                   เงินออมเริ่มต้น (บาท)
                 </label>
                 <input
                   type="text"
-                  inputMode="numeric"
-                  className="w-full rounded-lg p-3 text-base focus:outline-none focus:ring-2 focus:ring-gray-500 border-2 transition-all bg-gradient-to-r from-gray-50/50 to-gray-100/50"
-                  style={{
-                    borderColor: "rgba(4,8,27,0.125)",
-                    color: "#04081b",
-                  }}
                   value={initialAmount}
                   onChange={(e) =>
                     setInitialAmount(formatNumber(e.target.value))
                   }
+                  className="w-full rounded-lg p-3 border-2"
                   placeholder="0"
                 />
               </div>
             </div>
 
-            {/* Buttons */}
+            {/* ปุ่มคำนวณ / ล้างข้อมูล */}
             <div className="grid md:grid-cols-2 gap-4 mt-6">
               <button
                 onClick={handleCalculate}
-                className="w-full rounded-lg p-3 text-base font-bold text-white shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 relative overflow-hidden group"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #374151 0%, #111827 100%)",
-                }}
+                className="p-3 font-bold text-white rounded-lg bg-gray-800 hover:bg-gray-900 transition-all"
               >
-                <span className="relative z-10">คำนวณ</span>
-                <div className="absolute inset-0 bg-white/20 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left"></div>
+                คำนวณ
               </button>
 
               <button
                 onClick={handleClear}
-                className="w-full rounded-lg p-3 text-base font-bold border-2 shadow-lg hover:shadow-2xl transition-all transform hover:scale-105 bg-white"
-                style={{
-                  color: "#04081b",
-                  borderColor: "rgba(4,8,27,0.25)",
-                }}
+                className="p-3 font-bold rounded-lg border-2 hover:bg-gray-50 transition-all"
               >
                 ล้างข้อมูล
               </button>
             </div>
           </div>
 
-          {/* Result Section */}
+          {/* ---------- ส่วนแสดงผลลัพธ์ ---------- */}
           {result && (
-            <div
-              className="pt-8 border-t-2"
-              style={{ borderColor: "rgba(4,8,27,0.0625)" }}
-            >
-              <div className="flex items-center gap-2 mb-6">
-                <div className="w-1 h-6 rounded-full bg-gradient-to-b from-gray-600 to-gray-800"></div>
-                <h2 className="text-2xl font-bold" style={{ color: "#04081b" }}>
-                  ผลการคำนวณ
-                </h2>
-              </div>
+            <div className="pt-8 border-t-2 border-gray-200">
+              <h2 className="text-2xl font-bold mb-6 text-gray-800">
+                ผลการคำนวณ
+              </h2>
 
-              {/* Main Result Box */}
-              <div
-                className="rounded-xl p-6 text-white text-center mb-5 shadow-lg relative overflow-hidden"
-                style={{
-                  background:
-                    "linear-gradient(135deg, #374151 0%, #111827 100%)",
-                }}
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
-                <div className="relative z-10">
-                  <p className="text-sm opacity-90 mb-2 font-normal">
-                    จำนวนเงินที่ต้องออม
-                  </p>
-                  <div className="flex items-baseline justify-center gap-2">
-                    <p className="text-4xl font-bold">
-                      {result.monthlyPayment > 0
-                        ? Math.ceil(result.monthlyPayment).toLocaleString()
-                        : 0}
-                    </p>
-                    <p className="text-lg font-normal">บาท</p>
-                  </div>
-                  <p className="text-sm opacity-90 mt-2 font-normal">ต่อเดือน</p>
-                </div>
-              </div>
-
-              {/* Breakdown */}
-              <div className="space-y-3 mb-6">
-                <div
-                  className="flex justify-between items-center p-4 rounded-xl border-2 transition-all hover:shadow-md"
-                  style={{ backgroundColor: "#f9fafb", borderColor: "#e5e7eb" }}
-                >
-                  <span
-                    className="font-normal text-base flex items-center gap-2"
-                    style={{ color: "#04081b" }}
-                  >
-                    <div className="w-2 h-2 rounded-full bg-gray-600"></div>
-                    เงินต้นที่ฝากสะสม
-                  </span>
-                  <span
-                    className="font-bold text-base"
-                    style={{ color: "#04081b" }}
-                  >
-                    {Math.ceil(result.totalDeposit).toLocaleString()} บาท
-                  </span>
-                </div>
-
-                <div
-                  className="flex justify-between items-center p-4 rounded-xl border-2 transition-all hover:shadow-md"
-                  style={{ backgroundColor: "#f9fafb", borderColor: "#e5e7eb" }}
-                >
-                  <span
-                    className="font-normal text-base flex items-center gap-2"
-                    style={{ color: "#04081b" }}
-                  >
-                    <div className="w-2 h-2 rounded-full bg-gray-600"></div>
-                    ดอกเบี้ยที่ได้รับ
-                  </span>
-                  <span
-                    className="font-bold text-base"
-                    style={{ color: "#04081b" }}
-                  >
-                    +{Math.ceil(result.totalInterest).toLocaleString()} บาท
-                  </span>
-                </div>
-
-                <div
-                  className="flex justify-between items-center p-5 rounded-xl border-2 shadow-md"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, #f3f4f615 0%, #1f293715 100%)",
-                    borderColor: "#6b728040",
-                  }}
-                >
-                  <span
-                    className="font-bold text-base flex items-center gap-2"
-                    style={{ color: "#04081b" }}
-                  >
-                    <div className="w-3 h-3 rounded-full bg-gradient-to-r from-gray-600 to-gray-900"></div>
-                    เงินออมที่ได้รวม
-                  </span>
-                  <span className="font-bold text-xl bg-gradient-to-r from-gray-700 to-gray-900 bg-clip-text text-transparent">
-                    {result.targetAmount.toLocaleString()} บาท
-                  </span>
-                </div>
-              </div>
-
-              {/* Note */}
-              <div className="p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl border-l-4 border-amber-400 shadow-sm">
-                <p className="text-sm text-gray-700 leading-relaxed font-normal flex items-start gap-2">
-                  <span className="text-amber-600 text-lg">💡</span>
-                  <span>
-                    <span className="font-bold text-amber-800">หมายเหตุ:</span>{" "}
-                    ผลการคำนวณข้างต้นเป็นเพียงประมาณการเบื้องต้นเท่านั้น
-                  </span>
+              {/* กล่องหลักแสดงจำนวนเงินที่ต้องออมต่อเดือน */}
+              <div className="rounded-xl p-6 text-white text-center mb-5 shadow-lg bg-gradient-to-br from-gray-700 to-gray-900">
+                <p className="text-sm mb-2 opacity-90">จำนวนเงินที่ต้องออม</p>
+                <p className="text-4xl font-bold">
+                  {Math.ceil(result.monthlyPayment).toLocaleString()} บาท
                 </p>
+                <p className="text-sm opacity-90 mt-2">ต่อเดือน</p>
+              </div>
+
+              {/* แสดงรายละเอียดแยก */}
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between p-4 rounded-xl border-2 bg-gray-50">
+                  <span>เงินต้นที่ฝากสะสม</span>
+                  <span>{Math.ceil(result.totalDeposit).toLocaleString()} บาท</span>
+                </div>
+
+                <div className="flex justify-between p-4 rounded-xl border-2 bg-gray-50">
+                  <span>ดอกเบี้ยที่ได้รับ</span>
+                  <span>+{Math.ceil(result.totalInterest).toLocaleString()} บาท</span>
+                </div>
+
+                <div className="flex justify-between p-5 rounded-xl border-2 bg-gray-100 font-bold">
+                  <span>เงินออมรวมทั้งหมด</span>
+                  <span>{result.targetAmount.toLocaleString()} บาท</span>
+                </div>
+              </div>
+
+              {/* หมายเหตุ */}
+              <div className="p-4 bg-yellow-50 rounded-xl border-l-4 border-yellow-400">
+                💡 ผลการคำนวณเป็นเพียงประมาณการเบื้องต้น
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer Info */}
+        {/* ---------- ส่วนท้าย ---------- */}
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>💰 วางแผนการเงินเพื่ออนาคตที่มั่นคง</p>
+          💰 วางแผนการเงินเพื่ออนาคตที่มั่นคง
         </div>
       </div>
     </div>

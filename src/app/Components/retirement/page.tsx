@@ -2,19 +2,26 @@
 
 import React, { useState, useMemo, useCallback, memo } from "react";
 
+/* 
+  🔹 สร้าง interface สำหรับ props ของ InputField 
+  เพื่อกำหนดชนิดของข้อมูลที่ส่งเข้ามา
+*/
 interface InputFieldProps {
-  label: string;
-  keyName: string;
-  suffix?: string;
-  value: string;
-  onChange: (key: string, value: string) => void;
-  placeholder?: string;
-  info?: string; // tooltip support
-  min?: number;
-  max?: number;
-  relatedValue?: number;
+  label: string; // ชื่อ label ของช่อง input
+  keyName: string; // ชื่อ key สำหรับเก็บใน state
+  suffix?: string; // หน่วย เช่น "ปี", "บาท"
+  value: string; // ค่าที่กรอกอยู่ใน input
+  onChange: (key: string, value: string) => void; // ฟังก์ชันเปลี่ยนค่า
+  placeholder?: string; // ข้อความตัวอย่างในช่อง input
+  info?: string; // tooltip อธิบายเพิ่มเติม
+  min?: number; // ค่าต่ำสุด
+  max?: number; // ค่าสูงสุด
+  relatedValue?: number; // ค่าที่ต้องใช้เปรียบเทียบ เช่น อายุปัจจุบัน
 }
 
+/* 
+  🔹 คอมโพเนนต์ InputField ใช้ memo() เพื่อลดการ re-render เมื่อไม่มีการเปลี่ยนแปลงค่า
+*/
 const InputField = memo(
   ({
     label,
@@ -28,6 +35,7 @@ const InputField = memo(
     max,
     relatedValue,
   }: InputFieldProps) => {
+    // ฟังก์ชันแปลงตัวเลขให้มี comma เช่น 30000 → 30,000
     const formatNumber = (num: string) => {
       const cleaned = num.replace(/,/g, "");
       if (cleaned === "" || isNaN(Number(cleaned))) return "";
@@ -36,15 +44,16 @@ const InputField = memo(
       return parts.join(".");
     };
 
+    // ฟังก์ชันจัดการเวลาผู้ใช้พิมพ์ตัวเลข
     const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
       const raw = e.target.value.replace(/,/g, "");
-      // อนุญาตให้พิมพ์ตัวเลขและจุดทศนิยม
+      // อนุญาตเฉพาะตัวเลขและจุดทศนิยม
       if (/^\d*\.?\d*$/.test(raw)) {
         onChange(keyName, raw);
       }
     };
 
-    // ตรวจ validation
+    // ตรวจสอบความถูกต้องของข้อมูล (validation)
     const numberValue = parseFloat(value) || 0;
     let error = "";
     if (min !== undefined && numberValue < min) {
@@ -56,16 +65,19 @@ const InputField = memo(
       ((keyName === "retireAge" && numberValue <= relatedValue) ||
         (keyName === "lifeExpectancy" && numberValue <= relatedValue))
     ) {
+      // ตรวจว่าค่าที่กรอกต้องมากกว่าอีกค่าหนึ่ง (เช่น อายุเกษียณ > อายุปัจจุบัน)
       error =
         keyName === "retireAge"
           ? `ต้องมากกว่าอายุปัจจุบัน`
           : `ต้องมากกว่าอายุเกษียณ`;
     }
 
+    // ✅ ส่วนของการแสดงผล InputField
     return (
       <div className="bg-gray-50 p-3 rounded relative">
         <label className="text-sm text-gray-600 mb-1 flex items-center gap-1">
           {label}
+          {/* แสดง tooltip ถ้ามี info */}
           {info && (
             <div className="relative group cursor-pointer">
               <div className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-200 text-gray-900 text-xs font-bold">
@@ -80,6 +92,7 @@ const InputField = memo(
 
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
+            {/* กล่อง input สำหรับกรอกตัวเลข */}
             <input
               id={keyName}
               inputMode="decimal"
@@ -90,10 +103,12 @@ const InputField = memo(
                 error ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"
               } text-gray-900`}
             />
+            {/* หน่วยท้ายช่อง เช่น “ปี”, “บาท” */}
             {suffix && (
               <span className="text-sm text-gray-600 whitespace-nowrap">{suffix}</span>
             )}
           </div>
+          {/* แสดงข้อความ error ถ้ามี */}
           {error && <div className="text-red-500 text-xs">{error}</div>}
         </div>
       </div>
@@ -103,6 +118,7 @@ const InputField = memo(
 
 InputField.displayName = "InputField";
 
+/* ค่าตั้งต้นของฟอร์มทั้งหมด */
 const DEFAULT_INPUTS = {
   currentAge: "",
   retireAge: "",
@@ -116,22 +132,33 @@ const DEFAULT_INPUTS = {
   pvdCurrent: "",
 };
 
+/* 
+  🔹 คอมโพเนนต์หลัก RetirementPlan 
+  ใช้สำหรับคำนวณแผนการเกษียณ
+*/
 export default function RetirementPlan() {
+  // state สำหรับเก็บค่าจากทุกช่อง input
   const [inputs, setInputs] = useState({ ...DEFAULT_INPUTS });
 
+  // ฟังก์ชันเปลี่ยนค่าใน state ตามช่อง input
   const handleChange = useCallback((key: string, value: string) => {
     setInputs((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  // ฟังก์ชันรีเซ็ตค่า input ทั้งหมด
   const handleReset = useCallback(() => {
     setInputs({ ...DEFAULT_INPUTS });
   }, []);
 
+  // แปลง string → number
   const toNumber = (v: string) => {
     const n = parseFloat(v);
     return Number.isFinite(n) ? n : 0;
   };
 
+  /* 
+    ✅ ใช้ useMemo เพื่อคำนวณผลลัพธ์เฉพาะเมื่อค่า input เปลี่ยน
+  */
   const results = useMemo(() => {
     const currentAge = toNumber(inputs.currentAge);
     const retireAge = toNumber(inputs.retireAge);
@@ -144,6 +171,7 @@ export default function RetirementPlan() {
     const pvdMonthly = toNumber(inputs.pvdMonthly);
     const pvdCurrent = toNumber(inputs.pvdCurrent);
 
+    // ✅ ตรวจว่าข้อมูลกรอกครบและถูกต้องก่อนคำนวณ
     if (retireAge <= currentAge || lifeExpectancy <= retireAge || currentExpense <= 0) {
       return {
         yearsToRetire: 0,
@@ -158,29 +186,36 @@ export default function RetirementPlan() {
       };
     }
 
+    // 🧮 คำนวณค่าต่างๆ
     const yearsToRetire = retireAge - currentAge;
     const yearsAfterRetire = lifeExpectancy - retireAge;
     const monthsToRetire = yearsToRetire * 12;
     const monthsAfterRetire = yearsAfterRetire * 12;
 
+    // ค่าใช้จ่ายในอนาคต (คิดเงินเฟ้อ)
     const futureExpense =
       currentExpense * Math.pow(1 + inflationRate / 100, yearsToRetire);
 
+    // ผลตอบแทนจริงหลังหักเงินเฟ้อ
     const realRate =
       (1 + returnAfterRetire / 100) / (1 + inflationRate / 100) - 1;
     const realRateMonthly = realRate / 12;
 
+    // ปัจจัยคิดลด (PV factor)
     const pvFactor =
       Math.abs(realRateMonthly) > 1e-12
         ? (1 - Math.pow(1 + realRateMonthly, -monthsAfterRetire)) / realRateMonthly
         : monthsAfterRetire;
 
+    // เงินที่ต้องมีทั้งหมดเมื่อเกษียณ
     const totalNeeded = futureExpense * pvFactor;
 
+    // มูลค่าเงินกองทุนปัจจุบันในอนาคต
     const pvdCurrentFuture = pvdCurrent * Math.pow(1 + pvdReturn / 100, yearsToRetire);
     const rMonthly = pvdReturn / 100 / 12;
     const gMonthly = salaryGrowth / 100 / 12;
 
+    // คำนวณยอดสะสมในอนาคตจากการออมรายเดือน
     let pvdMonthlySavings = 0;
     if (Math.abs(rMonthly - gMonthly) < 1e-12) {
       pvdMonthlySavings =
@@ -192,16 +227,20 @@ export default function RetirementPlan() {
       pvdMonthlySavings = pvdMonthly * (numerator / (rMonthly - gMonthly));
     }
 
+    // มูลค่ากองทุนสำรองเลี้ยงชีพรวมทั้งหมด
     const totalPVD = pvdCurrentFuture + pvdMonthlySavings;
     const shortage = totalNeeded - totalPVD;
 
+    // ปัจจัยสำหรับคำนวณการออมเพิ่ม
     const fvFactor =
       Math.abs(rMonthly) > 1e-12
         ? (Math.pow(1 + rMonthly, monthsToRetire) - 1) / rMonthly
         : monthsToRetire;
 
+    // ต้องออมเพิ่มต่อเดือนเท่าไหร่
     const additionalSavings = shortage > 0 ? shortage / fvFactor : 0;
 
+    // ✅ คืนค่าผลลัพธ์ทั้งหมด
     return {
       yearsToRetire,
       yearsAfterRetire,
@@ -215,9 +254,13 @@ export default function RetirementPlan() {
     };
   }, [inputs]);
 
+  // ฟังก์ชันจัดรูปแบบตัวเลขให้มี comma
   const formatNumber = (num: number, maximumFractionDigits = 0) =>
     new Intl.NumberFormat("th-TH", { maximumFractionDigits }).format(num);
 
+  /* 
+    ✅ ส่วนการแสดงผลหน้าเว็บ 
+  */
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -225,10 +268,11 @@ export default function RetirementPlan() {
           แผนการเกษียณ
         </h1>
 
-        {/* ข้อมูลพื้นฐาน */}
+        {/* ------------------ ส่วนกรอกข้อมูลพื้นฐาน ------------------ */}
         <div className="bg-white rounded-lg p-6 mb-6 border-l-4 border-blue-500">
           <h2 className="text-lg font-bold text-gray-800 mb-4">ข้อมูลพื้นฐาน</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* อายุปัจจุบัน */}
             <InputField
               label="อายุปัจจุบัน"
               keyName="currentAge"
@@ -240,6 +284,8 @@ export default function RetirementPlan() {
               max={120}
               info="กรอกอายุปัจจุบัน (0-120 ปี)"
             />
+
+            {/* อายุเกษียณ */}
             <InputField
               label="อายุเกษียณ"
               keyName="retireAge"
@@ -252,6 +298,8 @@ export default function RetirementPlan() {
               relatedValue={toNumber(inputs.currentAge)}
               info="ต้องมากกว่าอายุปัจจุบัน"
             />
+
+            {/* อายุขัย */}
             <InputField
               label="อายุขัย"
               keyName="lifeExpectancy"
@@ -263,7 +311,9 @@ export default function RetirementPlan() {
               max={150}
               relatedValue={toNumber(inputs.retireAge)}
               info="ต้องมากกว่าอายุเกษียณ"
-            />          
+            />
+
+            {/* ระยะเวลาออมและใช้จ่าย */}
             <div className="bg-gray-50 p-3 rounded">
               <div className="text-sm text-gray-600 mb-1">ระยะเวลาออม</div>
               <div className="text-lg font-bold text-gray-800">
@@ -276,11 +326,21 @@ export default function RetirementPlan() {
                 {results.yearsAfterRetire} ปี
               </div>
             </div>
-            <InputField label="ค่าใช้จ่ายปัจจุบัน" keyName="currentExpense" value={inputs.currentExpense} onChange={handleChange} suffix="บาท/เดือน" placeholder="เช่น 30000" info="ค่าใช้จ่ายเฉลี่ยต่อเดือนในปัจจุบัน" />
+
+            {/* ค่าใช้จ่ายต่อเดือน */}
+            <InputField
+              label="ค่าใช้จ่ายปัจจุบัน"
+              keyName="currentExpense"
+              value={inputs.currentExpense}
+              onChange={handleChange}
+              suffix="บาท/เดือน"
+              placeholder="เช่น 30000"
+              info="ค่าใช้จ่ายเฉลี่ยต่อเดือนในปัจจุบัน"
+            />
           </div>
         </div>
 
-        {/* อัตราต่างๆ */}
+        {/* ------------------ ส่วนอัตราต่างๆ ------------------ */}
         <div className="bg-white rounded-lg p-6 mb-6 border-l-4 border-blue-500">
           <h2 className="text-lg font-bold text-gray-800 mb-4">อัตราต่างๆ</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -288,30 +348,31 @@ export default function RetirementPlan() {
             <InputField label="การเพิ่มเงินเดือน" keyName="salaryGrowth" value={inputs.salaryGrowth} onChange={handleChange} suffix="%" placeholder="เช่น 0" info="อัตราการขึ้นเงินเดือนเฉลี่ยต่อปี" />
             <InputField label="ผลตอบแทนหลังเกษียณ" keyName="returnAfterRetire" value={inputs.returnAfterRetire} onChange={handleChange} suffix="%" placeholder="เช่น 4" info="ผลตอบแทนเฉลี่ยจากการลงทุนหลังเกษียณ" />
             <InputField label="ผลตอบแทนกองทุน (PVD)" keyName="pvdReturn" value={inputs.pvdReturn} onChange={handleChange} suffix="%" placeholder="เช่น 4" info="ผลตอบแทนเฉลี่ยต่อปีของกองทุนสำรองเลี้ยงชีพ" />
+
+            {/* แสดง real return rate */}
             <div className="bg-gray-100 p-3 rounded col-span-full relative">
-            <div className="flex items-center justify-between mb-1">
-              <div className="text-sm text-gray-600 flex items-center gap-1">
-                Real Return Rate
-                {/* ✅ Tooltip */}
-                <div className="relative group cursor-pointer">
-                  <div className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-200 text-gray-900 text-xs font-bold">
-                    i
-                  </div>
-                  <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-44 bg-gray-800 text-white text-xs rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                    ผลตอบแทนหลังหักเงินเฟ้อ
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-sm text-gray-600 flex items-center gap-1">
+                  Real Return Rate
+                  {/* tooltip */}
+                  <div className="relative group cursor-pointer">
+                    <div className="w-4 h-4 flex items-center justify-center rounded-full bg-gray-200 text-gray-900 text-xs font-bold">
+                      i
+                    </div>
+                    <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-44 bg-gray-800 text-white text-xs rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                      ผลตอบแทนหลังหักเงินเฟ้อ
+                    </div>
                   </div>
                 </div>
               </div>
+              <div className="text-lg font-bold text-blue-600">
+                {results.realRate.toFixed(2)}%
+              </div>
             </div>
-            <div className="text-lg font-bold text-blue-600">
-              {results.realRate.toFixed(2)}%
-            </div>
-          </div>
-
           </div>
         </div>
 
-        {/* PVD */}
+        {/* ------------------ ส่วนข้อมูลกองทุน PVD ------------------ */}
         <div className="bg-white rounded-lg p-6 mb-6 border-l-4 border-orange-500">
           <h2 className="text-lg font-bold text-gray-800 mb-4">
             ข้อมูลกองทุนสำรองเลี้ยงชีพ (PVD)
@@ -322,7 +383,7 @@ export default function RetirementPlan() {
           </div>
         </div>
 
-        {/* สรุปผล */}
+        {/* ------------------ ส่วนสรุปผล ------------------ */}
         <div className="bg-white rounded-lg p-6 mb-6 border-l-4 border-green-500">
           <h2 className="text-lg font-bold text-gray-800 mb-4">สรุปผล</h2>
           <table className="w-full mb-6">
@@ -362,6 +423,7 @@ export default function RetirementPlan() {
             </tbody>
           </table>
 
+          {/* ต้องออมเพิ่มต่อเดือน */}
           <div className="bg-yellow-100 p-6 rounded-lg text-center mb-4">
             <div className="text-gray-700 mb-2">
               ต้องออมเพิ่มต่อเดือน (นอกจากกองทุน)
@@ -371,6 +433,7 @@ export default function RetirementPlan() {
             </div>
           </div>
 
+          {/* รวมออมต่อเดือนทั้งหมด */}
           <div className="bg-blue-100 p-6 rounded-lg text-center">
             <div className="text-gray-700 mb-2">
               รวมการออมต่อเดือนทั้งหมด
@@ -381,12 +444,13 @@ export default function RetirementPlan() {
           </div>
         </div>
 
-        {/* ปุ่มรีเซ็ต */}
+        {/* ปุ่มรีเซ็ตค่า */}
         <div className="flex justify-center pb-8">
           <button
             onClick={handleReset}
             className="px-8 py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center gap-2 shadow-md"
           >
+            {/* ไอคอนวงกลมรีเซ็ต */}
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className="h-5 w-5"
